@@ -1,0 +1,97 @@
+.page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f6f6f6;
+}
+
+/* Header */
+.site-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #a7d7f9;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.header-content {
+    max-width: 980px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.site-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: #000;
+}
+
+.site-brand:hover {
+    text-decoration: none;
+}
+
+.brand-icon {
+    font-size: 1.5rem;
+}
+
+.brand-text {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
+}
+
+.header-tagline {
+    font-size: 0.85rem;
+    color: #54595d;
+    font-style: italic;
+}
+
+/* Main content */
+.main-content {
+    flex: 1;
+    max-width: 980px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+}
+
+/* Footer */
+.site-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #a2a9b1;
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #72777d;
+}
+
+.site-footer p {
+    margin: 0.25rem 0;
+}
+
+.footer-disclaimer {
+    font-style: italic;
+}
+
+/* Error UI */
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}

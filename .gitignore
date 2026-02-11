@@ -1,0 +1,22 @@
+# User secrets and config with API keys - do not commit
+InfoGen/appsettings.json
+**/appsettings.json
+
+# Build and IDE
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# .NET
+*.dll
+*.pdb
+*.exe
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+# OS
+.DS_Store
+Thumbs.db
