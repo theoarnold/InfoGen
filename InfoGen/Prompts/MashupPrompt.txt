@@ -6,29 +6,23 @@ Wikipedia has all kinds of articles: people, places, events, concepts, objects, 
 The article should:
 1. Combine elements, themes, facts, and ideas from ALL 4 source articles into one coherent, believable (but fictional) topic
 2. Read like a real Wikipedia article with an encyclopedic tone
-3. Start with an intro: 1–2 paragraphs with no heading (like Wikipedia's lead section)
-4. Then use Wikipedia-style section subheadings. Format each section heading on its own line exactly like this: == Section Name == (with two equals signs on each side). For biographical mashups use sections such as: == Early life ==, == Career ==, == Personal life ==. For other topics use appropriate sections (e.g. == History ==, == Description ==, == Legacy ==). Have at least 2–4 sections after the intro.
-5. Have a creative and plausible-sounding title for this mashup topic. If the article is about a PERSON (biographical), the title must be ONLY the person's name—no subtitle, no colon, no " - Something" or ": Something" (e.g. use "Jane Smith", not "Jane Smith: The Lost Years" or "Jane Smith - Singer"). For non-person topics you may use a descriptive title.
+3. Start with an intro (1–2 paragraphs, like Wikipedia's lead section) — put this in the "intro" field
+4. Then have 2–4 Wikipedia-style sections with headings. For biographical mashups use headings like "Early life", "Career", "Personal life". For other topics use appropriate headings (e.g. "History", "Description", "Legacy").
+5. Have a creative and plausible-sounding title. If the article is about a PERSON (biographical), the title must be ONLY the person's name—no subtitle, no colon, no " - Something" or ": Something" (e.g. "Jane Smith", not "Jane Smith: The Lost Years"). For non-person topics you may use a descriptive title.
 6. Be entertaining to read while maintaining a serious tone
 
-Format your response EXACTLY like this (use these exact labels):
-TITLE: [Your fake article title—if about a person, use only their name, no subtitle or colon]
-IMAGE_DESCRIPTION: [A short Wikipedia-style image caption only: state the subject and setting in one brief phrase (e.g. "A Lucha libre cosmonaut standing in front of a space capsule"). Do NOT describe the image style (e.g. no "black and white photograph", "shows", "wearing"), visual details, or how it looks—just who/what and where, like a real Wikipedia infobox caption.]
-ARTICLE:
-[Intro paragraph(s) with no heading, then sections with == Section Name == on its own line followed by that section's paragraphs. Separate paragraphs with blank lines.]
+For the imageDescription: provide a short Wikipedia-style image caption only. State the subject and setting in one brief phrase (e.g. "A Lucha libre cosmonaut standing in front of a space capsule"). Do NOT describe image style, visual details, or how it looks—just who/what and where, like a real Wikipedia infobox caption.
 
-Example structure after ARTICLE:
-First intro paragraph.
+For the infoboxFacts: provide 4–6 key-value pairs of quick-reference information that would appear in a Wikipedia infobox sidebar, just like a real article. The facts should be specific, plausible, and match the article type. Examples by type:
+- Person: Born, Died (if applicable), Nationality, Occupation, Known for, Spouse, Children
+- Place: Location, Region, Population, Area, Elevation, Founded
+- Event: Date, Location, Cause, Outcome, Participants
+- Organization: Founded, Headquarters, Type, Motto, Members
+- Species: Scientific name, Kingdom, Habitat, Conservation status
+- Work (book/film/album): Author/Director, Published/Released, Genre, Language
+Make up believable fictional details. Each label and value should be short (a few words each).
 
-Second intro paragraph.
-
-== Early life ==
-
-Section paragraph...
-
-== Career ==
-
-Section paragraph...
+Respond with valid JSON matching the schema provided. Each section's "content" field should contain the full paragraph(s) for that section (use \n\n to separate multiple paragraphs within a section).
 
 Here are the 4 Wikipedia article introductions to mashup:
 

@@ -1,4 +1,5 @@
-# User secrets and config with API keys - do not commit
+# Main app settings only - often contains API keys. Do not commit.
+# (appsettings.Development.json and appsettings.example.json are committed.)
 InfoGen/appsettings.json
 **/appsettings.json
 

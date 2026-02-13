@@ -59,34 +59,40 @@ else if (isLoading)
         <hr class="wiki-divider" />
 
         <div class="wiki-content-wrapper">
-            @if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl))
+            @if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl) || generatedArticle.InfoboxFacts.Count > 0)
             {
                 <div class="wiki-infobox">
-                    <div class="infobox-image">
-                        <img src="@generatedArticle.ImageDataUrl" alt="@generatedArticle.Title" />
-                    </div>
-                    <div class="infobox-caption">@generatedArticle.ImageDescription</div>
+                    <div class="infobox-header">@generatedArticle.Title</div>
+                    @if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl))
+                    {
+                        <div class="infobox-image">
+                            <img src="@generatedArticle.ImageDataUrl" alt="@generatedArticle.Title" />
+                        </div>
+                        <div class="infobox-caption">@generatedArticle.ImageDescription</div>
+                    }
+                    @if (generatedArticle.InfoboxFacts.Count > 0)
+                    {
+                        <table class="infobox-facts">
+                            @foreach (var fact in generatedArticle.InfoboxFacts)
+                            {
+                                <tr>
+                                    <th>@fact.Label</th>
+                                    <td>@fact.Value</td>
+                                </tr>
+                            }
+                        </table>
+                    }
                 </div>
             }
 
             <div class="wiki-body">
-                @if (generatedArticle.Sections.Count > 0)
+                @foreach (var articleSection in generatedArticle.Sections)
                 {
-                    @foreach (var articleSection in generatedArticle.Sections)
+                    @if (articleSection.Heading != null)
                     {
-                        @if (articleSection.Heading != null)
-                        {
-                            <h2 class="wiki-section-heading">@articleSection.Heading</h2>
-                        }
-                        @foreach (var paragraph in articleSection.Paragraphs)
-                        {
-                            <p>@paragraph</p>
-                        }
+                        <h2 class="wiki-section-heading">@articleSection.Heading</h2>
                     }
-                }
-                else
-                {
-                    @foreach (var paragraph in GetParagraphs(generatedArticle.Content))
+                    @foreach (var paragraph in articleSection.Paragraphs)
                     {
                         <p>@paragraph</p>
                     }
@@ -181,15 +187,6 @@ else if (isLoading)
             isLoading = false;
             StateHasChanged();
         }
-    }
-
-    private static List<string> GetParagraphs(string content)
-    {
-        return content
-            .Split(new[] { "\n\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(p => p.Trim())
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
     }
 
     private static string Truncate(string text, int maxLength)

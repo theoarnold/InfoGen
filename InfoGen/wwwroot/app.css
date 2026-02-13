@@ -4,8 +4,8 @@
 
 /* === Base === */
 html, body {
-    font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16px;
     line-height: 1.6;
     color: #202122;
     background-color: #f6f6f6;
@@ -209,50 +209,80 @@ a:hover {
 
 /* Content wrapper for article + infobox */
 .wiki-content-wrapper {
-    display: flex;
-    align-items: flex-start;
-    gap: 1.5rem;
+    display: flow-root; /* clearfix for float */
 }
 
-/* === Infobox (Image) === */
+/* === Infobox (Image + Facts) === */
 .wiki-infobox {
-    flex-shrink: 0;
-    width: 280px;
-    margin: 0;
+    float: right;
+    width: 290px;
+    margin: 0.3rem 0 1rem 1.4rem;
     border: 1px solid #a2a9b1;
     background: #f8f9fa;
-    padding: 0.5rem;
-    font-size: 0.85rem;
-    order: 2; /* Put image on the right */
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.infobox-header {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0.45rem 0.6rem;
+    line-height: 1.35;
+    color: #000;
 }
 
 .infobox-image {
     text-align: center;
-    background: #fff;
-    padding: 2px;
+    padding: 3px 10px;
 }
 
 .infobox-image img {
     max-width: 100%;
     height: auto;
     display: block;
+    border: 1px solid #c8ccd1;
 }
 
 .infobox-caption {
     text-align: center;
-    padding: 0.4rem 0.25rem 0.1rem;
-    font-size: 0.82rem;
-    color: #54595d;
+    padding: 0.2rem 0.6rem 0.5rem;
+    font-size: 0.8rem;
+    color: #202122;
     line-height: 1.4;
+}
+
+.infobox-facts {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.infobox-facts tr {
+    border: none;
+}
+
+.infobox-facts th {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.2rem 0.6rem;
+    font-weight: 600;
+    color: #202122;
+    white-space: nowrap;
+}
+
+.infobox-facts td {
+    padding: 0.2rem 0.6rem;
+    vertical-align: top;
+    color: #202122;
+    line-height: 1.35;
 }
 
 /* === Wiki Body Text === */
 .wiki-body {
-    flex: 1;
-    font-size: 0.95rem;
-    line-height: 1.65;
+    font-size: 1rem;
+    line-height: 1.6;
     color: #202122;
-    order: 1; /* Put text on the left */
 }
 
 .wiki-body p {
@@ -261,6 +291,7 @@ a:hover {
 
 .wiki-body .wiki-section-heading {
     margin-top: 1.25rem;
+    overflow: hidden; /* prevent border-bottom from touching the floated infobox */
 }
 
 /* === Section Headings === */
@@ -272,7 +303,6 @@ a:hover {
     padding-bottom: 0.2rem;
     margin: 2rem 0 0.5rem 0;
     color: #000;
-    clear: both;
 }
 
 .wiki-section-divider {
@@ -343,17 +373,10 @@ a:hover {
 
 /* === Responsive === */
 @media (max-width: 700px) {
-    .wiki-content-wrapper {
-        flex-direction: column;
-    }
-    
     .wiki-infobox {
+        float: none;
         width: 100%;
-        order: 1;
-    }
-    
-    .wiki-body {
-        order: 2;
+        margin: 0 0 1rem 0;
     }
 
     .hero-section {

@@ -25,12 +25,13 @@ public class GeminiService
 
     /// <summary>
     /// Uses Gemini to generate a fake Wikipedia article from 4 source pages.
+    /// Returns structured JSON via Gemini's responseSchema feature.
     /// </summary>
     public async Task<GeneratedArticle> GenerateMashupArticleAsync(List<WikipediaPage> pages)
     {
         var prompt = BuildMashupPrompt(pages);
 
-        _logger.LogInformation("Sending mashup prompt to Gemini ({Model})...", _textModel);
+        _logger.LogInformation("Sending mashup prompt to Gemini ({Model}) with JSON schema...", _textModel);
 
         var requestBody = new
         {
@@ -43,11 +44,63 @@ public class GeminiService
                         new { text = prompt }
                     }
                 }
+            },
+            generationConfig = new
+            {
+                responseMimeType = "application/json",
+                responseSchema = new
+                {
+                    type = "OBJECT",
+                    properties = new Dictionary<string, object>
+                    {
+                        ["title"] = new { type = "STRING", description = "Article title. If biographical, use only the person's name." },
+                        ["imageDescription"] = new { type = "STRING", description = "Short Wikipedia-style caption: subject and setting in one phrase." },
+                        ["intro"] = new { type = "STRING", description = "Lead section: 1-2 paragraphs with no heading. Use \\n\\n between paragraphs." },
+                        ["sections"] = new
+                        {
+                            type = "ARRAY",
+                            description = "2-4 article sections after the intro.",
+                            items = new
+                            {
+                                type = "OBJECT",
+                                properties = new Dictionary<string, object>
+                                {
+                                    ["heading"] = new { type = "STRING", description = "Section heading (e.g. Early life, Career, History)." },
+                                    ["content"] = new { type = "STRING", description = "Section body text. Use \\n\\n between paragraphs." }
+                                },
+                                required = new[] { "heading", "content" }
+                            }
+                        },
+                        ["infoboxFacts"] = new
+                        {
+                            type = "ARRAY",
+                            description = "4-6 key-value pairs for the Wikipedia infobox sidebar (e.g. Born, Nationality, Occupation).",
+                            items = new
+                            {
+                                type = "OBJECT",
+                                properties = new Dictionary<string, object>
+                                {
+                                    ["label"] = new { type = "STRING", description = "Fact label (e.g. Born, Location, Genre)." },
+                                    ["value"] = new { type = "STRING", description = "Fact value (e.g. 12 March 1985, Scotland, Jazz fusion)." }
+                                },
+                                required = new[] { "label", "value" }
+                            }
+                        }
+                    },
+                    required = new[] { "title", "imageDescription", "intro", "sections", "infoboxFacts" }
+                }
             }
         };
 
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_textModel}:generateContent?key={_apiKey}";
-        var response = await _httpClient.PostAsJsonAsync(url, requestBody);
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+        var response = await _httpClient.PostAsJsonAsync(url, requestBody, jsonOptions);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -56,16 +109,21 @@ public class GeminiService
             throw new HttpRequestException($"Gemini API returned {response.StatusCode}: {errorBody}");
         }
 
-        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var text = json.GetProperty("candidates")[0]
+        var responseJson = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var text = responseJson.GetProperty("candidates")[0]
             .GetProperty("content")
             .GetProperty("parts")[0]
             .GetProperty("text")
-            .GetString() ?? "";
+            .GetString() ?? "{}";
 
-        _logger.LogInformation("Received article text ({Length} chars)", text.Length);
+        _logger.LogInformation("Received article JSON ({Length} chars)", text.Length);
 
-        return ParseGeneratedArticle(text);
+        var articleJson = JsonSerializer.Deserialize<GeminiArticleResponse>(text, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        }) ?? new GeminiArticleResponse();
+
+        return MapToGeneratedArticle(articleJson);
     }
 
     /// <summary>
@@ -161,131 +219,68 @@ public class GeminiService
         return File.ReadAllText(path);
     }
 
-    private static GeneratedArticle ParseGeneratedArticle(string text)
+    /// <summary>Maps the deserialized JSON response to the GeneratedArticle model.</summary>
+    private static GeneratedArticle MapToGeneratedArticle(GeminiArticleResponse response)
     {
-        var article = new GeneratedArticle();
-
-        var lines = text.Split('\n');
-        var articleStarted = false;
-        var articleLines = new List<string>();
-
-        foreach (var line in lines)
+        var article = new GeneratedArticle
         {
-            var trimmed = line.TrimStart();
+            Title = string.IsNullOrWhiteSpace(response.Title) ? "Untitled Article" : response.Title.Trim(),
+            ImageDescription = string.IsNullOrWhiteSpace(response.ImageDescription) ? response.Title ?? "" : response.ImageDescription.Trim()
+        };
 
-            if (trimmed.StartsWith("TITLE:", StringComparison.OrdinalIgnoreCase))
+        // Build sections: intro first (null heading), then named sections
+        if (!string.IsNullOrWhiteSpace(response.Intro))
+        {
+            article.Sections.Add(new ArticleSection
             {
-                article.Title = trimmed["TITLE:".Length..].Trim().Trim('*', '#');
-                article.Title = StripTitleSubtitle(article.Title);
-            }
-            else if (trimmed.StartsWith("IMAGE_DESCRIPTION:", StringComparison.OrdinalIgnoreCase))
+                Heading = null,
+                Paragraphs = SplitParagraphs(response.Intro)
+            });
+        }
+
+        if (response.Sections != null)
+        {
+            foreach (var s in response.Sections)
             {
-                article.ImageDescription = trimmed["IMAGE_DESCRIPTION:".Length..].Trim();
-            }
-            else if (trimmed.StartsWith("ARTICLE:", StringComparison.OrdinalIgnoreCase))
-            {
-                articleStarted = true;
-                var remainder = trimmed["ARTICLE:".Length..].Trim();
-                if (!string.IsNullOrEmpty(remainder))
-                    articleLines.Add(remainder);
-            }
-            else if (articleStarted)
-            {
-                articleLines.Add(line);
+                article.Sections.Add(new ArticleSection
+                {
+                    Heading = s.Heading?.Trim(),
+                    Paragraphs = SplitParagraphs(s.Content)
+                });
             }
         }
 
-        article.Content = string.Join("\n", articleLines).Trim();
-        article.Sections = ParseSections(articleLines);
-
-        if (string.IsNullOrEmpty(article.Title))
-            article.Title = "Untitled Article";
-        if (string.IsNullOrEmpty(article.Content))
-            article.Content = text; // Fallback: use full response
-        if (string.IsNullOrEmpty(article.ImageDescription))
-            article.ImageDescription = article.Title;
+        if (response.InfoboxFacts != null)
+        {
+            foreach (var fact in response.InfoboxFacts)
+            {
+                if (!string.IsNullOrWhiteSpace(fact.Label) && !string.IsNullOrWhiteSpace(fact.Value))
+                {
+                    article.InfoboxFacts.Add(new InfoboxFact
+                    {
+                        Label = fact.Label.Trim(),
+                        Value = fact.Value.Trim()
+                    });
+                }
+            }
+        }
 
         return article;
     }
 
-    /// <summary>Remove subtitle from person-style titles (e.g. "Name: The Lost Soundtrack" -> "Name").</summary>
-    private static string StripTitleSubtitle(string title)
+    /// <summary>Splits a block of text into paragraphs by double newlines.</summary>
+    private static List<string> SplitParagraphs(string? text)
     {
-        if (string.IsNullOrWhiteSpace(title)) return title;
-        var lastColon = title.LastIndexOf(':');
-        if (lastColon > 0 && lastColon < title.Length - 1)
-        {
-            var after = title[(lastColon + 1)..].Trim();
-            if (after.Length > 0 && !after.StartsWith("(")) return title[..lastColon].Trim();
-        }
-        var dashIndex = title.IndexOf(" - ", StringComparison.Ordinal);
-        if (dashIndex > 0)
-            return title[..dashIndex].Trim();
-        return title;
-    }
-
-    /// <summary>Parses article lines into intro + sections with == Heading == format.</summary>
-    private static List<ArticleSection> ParseSections(List<string> articleLines)
-    {
-        var sections = new List<ArticleSection>();
-        var currentParagraphs = new List<string>();
-        string? currentHeading = null;
-        var currentParagraph = new List<string>();
-
-        void FlushParagraph()
-        {
-            if (currentParagraph.Count == 0) return;
-            var text = string.Join(" ", currentParagraph).Trim();
-            if (!string.IsNullOrEmpty(text))
-                currentParagraphs.Add(text);
-            currentParagraph.Clear();
-        }
-
-        void FlushSection()
-        {
-            FlushParagraph();
-            if (currentParagraphs.Count > 0 || currentHeading != null)
-            {
-                sections.Add(new ArticleSection { Heading = currentHeading, Paragraphs = new List<string>(currentParagraphs) });
-                currentParagraphs.Clear();
-            }
-        }
-
-        foreach (var line in articleLines)
-        {
-            var trimmed = line.Trim();
-            if (trimmed.StartsWith("==") && trimmed.EndsWith("=="))
-            {
-                FlushSection();
-                currentHeading = trimmed.Trim('=').Trim();
-                continue;
-            }
-            if (string.IsNullOrWhiteSpace(trimmed))
-            {
-                FlushParagraph();
-                continue;
-            }
-            currentParagraph.Add(trimmed);
-        }
-
-        FlushSection();
-
-        if (sections.Count == 0)
-        {
-            var fallback = string.Join("\n", articleLines)
-                .Split(new[] { "\n\n" }, StringSplitOptions.None)
-                .Select(p => p.Trim().Replace("\n", " "))
-                .Where(p => !string.IsNullOrWhiteSpace(p))
-                .ToList();
-            if (fallback.Count > 0)
-                sections.Add(new ArticleSection { Heading = null, Paragraphs = fallback });
-        }
-
-        return sections;
+        if (string.IsNullOrWhiteSpace(text)) return new List<string>();
+        return text.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Replace("\n", " ").Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToList();
     }
 }
 
-// Request DTOs for proper JSON serialization of the image generation request
+// --- Request DTOs for image generation ---
+
 public class GeminiImageRequest
 {
     public GeminiContent[] Contents { get; set; } = Array.Empty<GeminiContent>();
@@ -307,15 +302,38 @@ public class GeminiGenerationConfig
     public string[] ResponseModalities { get; set; } = Array.Empty<string>();
 }
 
-// Result model
+// --- JSON response DTOs from Gemini structured output ---
+
+public class GeminiArticleResponse
+{
+    public string? Title { get; set; }
+    public string? ImageDescription { get; set; }
+    public string? Intro { get; set; }
+    public List<GeminiArticleSection>? Sections { get; set; }
+    public List<GeminiInfoboxFact>? InfoboxFacts { get; set; }
+}
+
+public class GeminiArticleSection
+{
+    public string? Heading { get; set; }
+    public string? Content { get; set; }
+}
+
+public class GeminiInfoboxFact
+{
+    public string? Label { get; set; }
+    public string? Value { get; set; }
+}
+
+// --- App result models ---
+
 public class GeneratedArticle
 {
     public string Title { get; set; } = "";
-    public string Content { get; set; } = "";
     public string ImageDescription { get; set; } = "";
     public string? ImageDataUrl { get; set; }
-    /// <summary>Parsed sections: intro (null heading) plus subheadings and their paragraphs.</summary>
     public List<ArticleSection> Sections { get; set; } = new();
+    public List<InfoboxFact> InfoboxFacts { get; set; } = new();
 }
 
 public class ArticleSection
@@ -323,5 +341,11 @@ public class ArticleSection
     /// <summary>Section heading, or null for the intro/lead.</summary>
     public string? Heading { get; set; }
     public List<string> Paragraphs { get; set; } = new();
+}
+
+public class InfoboxFact
+{
+    public string Label { get; set; } = "";
+    public string Value { get; set; } = "";
 }
 
