@@ -2,10 +2,11 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using InfoGen.Models;
 
 namespace InfoGen.Services;
 
-public class GeminiService
+public class GeminiService : IGeminiService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<GeminiService> _logger;
@@ -277,75 +278,5 @@ public class GeminiService
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToList();
     }
-}
-
-// --- Request DTOs for image generation ---
-
-public class GeminiImageRequest
-{
-    public GeminiContent[] Contents { get; set; } = Array.Empty<GeminiContent>();
-    public GeminiGenerationConfig? GenerationConfig { get; set; }
-}
-
-public class GeminiContent
-{
-    public GeminiPart[] Parts { get; set; } = Array.Empty<GeminiPart>();
-}
-
-public class GeminiPart
-{
-    public string? Text { get; set; }
-}
-
-public class GeminiGenerationConfig
-{
-    public string[] ResponseModalities { get; set; } = Array.Empty<string>();
-}
-
-// --- JSON response DTOs from Gemini structured output ---
-
-public class GeminiArticleResponse
-{
-    public string? Title { get; set; }
-    public string? ImageDescription { get; set; }
-    public string? Intro { get; set; }
-    public List<GeminiArticleSection>? Sections { get; set; }
-    public List<GeminiInfoboxFact>? InfoboxFacts { get; set; }
-}
-
-public class GeminiArticleSection
-{
-    public string? Heading { get; set; }
-    public string? Content { get; set; }
-}
-
-public class GeminiInfoboxFact
-{
-    public string? Label { get; set; }
-    public string? Value { get; set; }
-}
-
-// --- App result models ---
-
-public class GeneratedArticle
-{
-    public string Title { get; set; } = "";
-    public string ImageDescription { get; set; } = "";
-    public string? ImageDataUrl { get; set; }
-    public List<ArticleSection> Sections { get; set; } = new();
-    public List<InfoboxFact> InfoboxFacts { get; set; } = new();
-}
-
-public class ArticleSection
-{
-    /// <summary>Section heading, or null for the intro/lead.</summary>
-    public string? Heading { get; set; }
-    public List<string> Paragraphs { get; set; } = new();
-}
-
-public class InfoboxFact
-{
-    public string Label { get; set; } = "";
-    public string Value { get; set; } = "";
 }
 

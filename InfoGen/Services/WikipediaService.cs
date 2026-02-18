@@ -1,8 +1,9 @@
 using System.Text.Json;
+using InfoGen.Models;
 
 namespace InfoGen.Services;
 
-public class WikipediaService
+public class WikipediaService : IWikipediaService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<WikipediaService> _logger;
@@ -71,13 +72,5 @@ public class WikipediaService
 
         return result.Take(count).ToList();
     }
-}
-
-public class WikipediaPage
-{
-    public string Title { get; set; } = "";
-    public string Extract { get; set; } = "";
-    public int PageId { get; set; }
-    public string Url => $"https://en.wikipedia.org/wiki/{Uri.EscapeDataString(Title.Replace(' ', '_'))}";
 }
 

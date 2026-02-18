@@ -1,7 +1,8 @@
 @page "/"
+@using InfoGen.Models
 @using InfoGen.Services
-@inject WikipediaService WikipediaService
-@inject GeminiService GeminiService
+@inject IWikipediaService WikipediaService
+@inject IGeminiService GeminiService
 @rendermode InteractiveServer
 
 <PageTitle>@(generatedArticle != null ? $"{generatedArticle.Title} - InfoGen" : "InfoGen - Wikipedia Mashup Generator")</PageTitle>

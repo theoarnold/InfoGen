@@ -8,11 +8,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // Register HttpClient and services
-builder.Services.AddHttpClient<WikipediaService>(client =>
+builder.Services.AddHttpClient<IWikipediaService, WikipediaService>(client =>
 {
     client.DefaultRequestHeaders.Add("User-Agent", "InfoGen/1.0 (https://github.com/yourusername/InfoGen; contact@example.com)");
 });
-builder.Services.AddHttpClient<GeminiService>(client =>
+builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
 {
     client.Timeout = TimeSpan.FromMinutes(3); // Image generation can be slow
 });
