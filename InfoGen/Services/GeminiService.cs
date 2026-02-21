@@ -20,7 +20,7 @@ public class GeminiService : IGeminiService
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"]
             ?? throw new InvalidOperationException("Gemini:ApiKey is not configured in appsettings.json");
-        _textModel = configuration["Gemini:TextModel"] ?? "gemini-2.0-flash";
+        _textModel = configuration["Gemini:TextModel"] ?? "gemini-3-flash-preview";
         _imageModel = configuration["Gemini:ImageModel"] ?? "gemini-2.0-flash-exp-image-generation";
     }
 

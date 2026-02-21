@@ -1,15 +1,16 @@
 .page-wrapper {
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     background-color: #f6f6f6;
+    overflow: auto;
 }
 
 /* Header */
 .site-header {
     background-color: #ffffff;
     border-bottom: 1px solid #a7d7f9;
-    padding: 0.5rem 1rem;
+    padding: 0.2rem 1rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
@@ -38,42 +39,62 @@
 }
 
 .brand-text {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     font-weight: 700;
     font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
 }
 
 .header-tagline {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: #54595d;
     font-style: italic;
+}
+
+.header-search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.header-search-input {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+    border: 1px solid #a2a9b1;
+    border-right: none;
+    border-radius: 3px 0 0 3px;
+    outline: none;
+    width: 180px;
+}
+
+.header-search-input:focus {
+    border-color: #3366cc;
+}
+
+.header-search-btn {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: #3366cc;
+    color: #fff;
+    border: 1px solid #3366cc;
+    border-radius: 0 3px 3px 0;
+    cursor: pointer;
+}
+
+.header-search-btn:hover {
+    background: #2a56b3;
 }
 
 /* Main content */
 .main-content {
     flex: 1;
-    max-width: 980px;
+    min-height: 0;
     width: 100%;
     margin: 0 auto;
     padding: 1.5rem 1rem;
-}
-
-/* Footer */
-.site-footer {
-    background-color: #f8f9fa;
-    border-top: 1px solid #a2a9b1;
-    padding: 1rem;
-    text-align: center;
-    font-size: 0.8rem;
-    color: #72777d;
-}
-
-.site-footer p {
-    margin: 0.25rem 0;
-}
-
-.footer-disclaimer {
-    font-style: italic;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
 }
 
 /* Error UI */

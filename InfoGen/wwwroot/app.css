@@ -13,6 +13,10 @@ html, body {
     padding: 0;
 }
 
+body:has(.home-page) {
+    overflow: hidden;
+}
+
 a {
     color: #0645ad;
     text-decoration: none;
@@ -20,6 +24,14 @@ a {
 
 a:hover {
     text-decoration: underline;
+}
+
+a.btn-generate,
+a.btn-save,
+a.btn-generate:hover,
+a.btn-save:hover {
+    color: #fff;
+    text-decoration: none;
 }
 
 /* === Hero Section === */
@@ -30,6 +42,11 @@ a:hover {
     border: 1px solid #a7d7f9;
     border-radius: 4px;
     margin-top: 2rem;
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
 }
 
 .hero-logo {
@@ -73,22 +90,18 @@ a:hover {
     font-size: 1.05rem;
     font-weight: 600;
     color: #fff;
-    background: linear-gradient(135deg, #3366cc 0%, #2a4fa0 100%);
+    background: #3366cc;
     border: none;
-    border-radius: 6px;
+    border-radius: 3px;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(51, 102, 204, 0.3);
 }
 
 .btn-generate:hover:not(:disabled) {
-    background: linear-gradient(135deg, #2a56b3 0%, #1e3d80 100%);
-    box-shadow: 0 4px 16px rgba(51, 102, 204, 0.4);
-    transform: translateY(-1px);
+    background: #2a56b3;
 }
 
 .btn-generate:active:not(:disabled) {
-    transform: translateY(0);
 }
 
 .btn-generate:disabled {
@@ -113,6 +126,11 @@ a:hover {
     border: 1px solid #c8ccd1;
     border-radius: 4px;
     margin-top: 2rem;
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
 }
 
 .loading-spinner {
@@ -165,14 +183,26 @@ a:hover {
 }
 
 .step.done {
-    color: #14866d;
+    color: #202122;
     font-weight: 400;
 }
 
-.step-icon {
-    font-size: 1.2rem;
-    width: 1.5rem;
-    text-align: center;
+.step-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #c8ccd1;
+    flex-shrink: 0;
+    transition: background 0.3s ease;
+}
+
+.step.done .step-dot {
+    background: #3366cc;
+}
+
+.step.active:not(.done) .step-dot {
+    background: #3366cc;
+    box-shadow: 0 0 0 3px rgba(51, 102, 204, 0.25);
 }
 
 /* === Wiki Article === */
@@ -182,6 +212,11 @@ a:hover {
     border-radius: 2px;
     padding: 1.5rem 2rem 2rem;
     margin-top: 1rem;
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
 }
 
 .wiki-title {
@@ -215,7 +250,7 @@ a:hover {
 /* === Infobox (Image + Facts) === */
 .wiki-infobox {
     float: right;
-    width: 290px;
+    width: 334px;
     margin: 0.3rem 0 1rem 1.4rem;
     border: 1px solid #a2a9b1;
     background: #f8f9fa;
@@ -341,6 +376,47 @@ a:hover {
     padding-top: 1.5rem;
     border-top: 1px solid #eaecf0;
     text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 2rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #fff;
+    background: #3366cc;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-save:hover:not(:disabled) {
+    background: #2a56b3;
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.save-confirmation {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1.2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d8a4e;
+    background: #e8f5e9;
+    border-radius: 3px;
 }
 
 /* === Error Banner === */
@@ -403,6 +479,211 @@ a:hover {
     .error-banner .btn-generate {
         margin-left: 0;
     }
+}
+
+/* === Home Page === */
+.home-page {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 0 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.home-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.home-logo {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #202122;
+    margin: 0 0 0.3rem 0;
+    font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
+    text-shadow:
+        0 1px 0 #c0c0c0,
+        0 2px 0 #b0b0b0,
+        0 3px 0 #a0a0a0,
+        0 4px 0 #909090,
+        0 5px 6px rgba(0, 0, 0, 0.15);
+    animation: bob 3s ease-in-out infinite;
+}
+
+@keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.home-tagline {
+    color: #54595d;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.search-container {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.search-box {
+    display: flex;
+    max-width: 600px;
+    margin: 0 auto 1rem auto;
+    border: 2px solid #a2a9b1;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #fff;
+    transition: border-color 0.2s;
+}
+
+.search-box:focus-within {
+    border-color: #3366cc;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    font-size: 1.05rem;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #202122;
+}
+
+.search-button {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    background: #3366cc;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-button:hover {
+    background: #2a56b3;
+}
+
+.home-generate-btn {
+    display: inline-flex;
+    margin-top: 0.5rem;
+    text-decoration: none;
+}
+
+.recent-articles {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.recent-articles::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 150px;
+    background: linear-gradient(to bottom, rgba(246,246,246,0) 0%, rgba(246,246,246,1) 70%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.recent-articles-list {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* === Search Results / Article Cards === */
+.search-results {
+    margin-top: 1rem;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.search-results-list {
+    overflow: hidden;
+}
+
+.load-more-container {
+    text-align: center;
+    padding: 1.5rem 0;
+}
+
+.load-more-btn {
+    padding: 0.6rem 2rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #3366cc;
+    background: #fff;
+    border: 2px solid #3366cc;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.load-more-btn:hover:not(:disabled) {
+    background: #3366cc;
+    color: #fff;
+}
+
+.load-more-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.results-heading {
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: #54595d;
+    border-bottom: 1px solid #eaecf0;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.article-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #202122;
+    transition: background 0.15s;
+}
+
+.article-card:hover {
+    background: #eaecf0;
+}
+
+.article-card-image {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #c8ccd1;
+    flex-shrink: 0;
+}
+
+.article-card-body h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #0645ad;
+}
+
+.article-card-body .article-card-date {
+    font-size: 0.85rem;
+    color: #72777d;
 }
 
 /* === Blazor Error Boundary === */

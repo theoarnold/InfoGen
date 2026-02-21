@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <div class="page-wrapper">
     <header class="site-header">
@@ -6,7 +6,11 @@
             <a class="site-brand" href="">
                 <span class="brand-text">InfoGen</span>
             </a>
-            <span class="header-tagline">The AI-Powered Fake Encyclopedia</span>
+            <span class="header-tagline">The Fake Encyclopedia</span>
+            <form class="header-search" action="/" method="get">
+                <input type="text" name="q" placeholder="Search articles..." class="header-search-input" />
+                <button type="submit" class="header-search-btn">Search</button>
+            </form>
         </div>
     </header>
 
@@ -14,10 +18,6 @@
         @Body
     </main>
 
-    <footer class="site-footer">
-        <p>Powered by <strong>Wikipedia API</strong>, <strong>Google Gemini</strong>, and <strong>Nano Banana</strong> image generation.</p>
-        <p class="footer-disclaimer">All generated articles are fictional. For entertainment purposes only.</p>
-    </footer>
 </div>
 
 <div id="blazor-error-ui">

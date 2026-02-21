@@ -1,199 +1,161 @@
 @page "/"
-@using InfoGen.Models
 @using InfoGen.Services
-@inject IWikipediaService WikipediaService
-@inject IGeminiService GeminiService
+@inject IArticleStorageService ArticleStorageService
 @rendermode InteractiveServer
 
-<PageTitle>@(generatedArticle != null ? $"{generatedArticle.Title} - InfoGen" : "InfoGen - Wikipedia Mashup Generator")</PageTitle>
+<PageTitle>InfoGen - The Fake Encyclopedia</PageTitle>
 
-@if (!isLoading && generatedArticle == null)
-{
-    <div class="hero-section">
-        <div class="hero-logo">
-            <div class="logo-puzzle">
-                <span>📰</span>
-            </div>
-            <h1>InfoGen</h1>
-            <p class="hero-tagline">The AI-Powered Fake Encyclopedia</p>
-        </div>
-        <p class="hero-description">
-            InfoGen fetches 4 random Wikipedia articles and uses <strong>Google Gemini</strong> to mash them
-            into a single, cohesive (but totally fake) encyclopedia entry — complete with an AI-generated image
-            powered by <strong>Nano Banana</strong>.
-        </p>
-        <button class="btn-generate" @onclick="GenerateArticle" disabled="@isLoading">
-            <span class="btn-icon">🎲</span>
-            Generate Mashup Article
-        </button>
+<div class="home-page">
+    <div class="home-header">
+        <h1 class="home-logo">InfoGen</h1>
+        <p class="home-tagline">The Fake Encyclopedia</p>
     </div>
-}
-else if (isLoading)
-{
-    <div class="loading-section">
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-        </div>
-        <p class="loading-status">@statusMessage</p>
-        <div class="loading-steps">
-            <div class="step @(currentStep >= 1 ? "active" : "") @(currentStep > 1 ? "done" : "")">
-                <span class="step-icon">@(currentStep > 1 ? "✅" : "📡")</span>
-                <span>Fetching Wikipedia pages</span>
+
+    <div class="search-container">
+        <form @onsubmit="Search">
+            <div class="search-box">
+                <input type="text" @bind="searchQuery" @bind:event="oninput"
+                       placeholder="Search saved articles..." class="search-input" />
+                <button type="submit" class="search-button">Search</button>
             </div>
-            <div class="step @(currentStep >= 2 ? "active" : "") @(currentStep > 2 ? "done" : "")">
-                <span class="step-icon">@(currentStep > 2 ? "✅" : "🤖")</span>
-                <span>Generating mashup article</span>
-            </div>
-            <div class="step @(currentStep >= 3 ? "active" : "") @(currentStep > 3 ? "done" : "")">
-                <span class="step-icon">@(currentStep > 3 ? "✅" : "🎨")</span>
-                <span>Creating image with Nano Banana</span>
-            </div>
-        </div>
+        </form>
+        <a href="/generate" class="btn-generate home-generate-btn">
+        Generate New Article
+        </a>
     </div>
-}
 
-@if (generatedArticle != null && !isLoading)
-{
-    <div class="wiki-article">
-        <h1 class="wiki-title">@generatedArticle.Title</h1>
-        <div class="wiki-from">From InfoGen, the free fake encyclopedia</div>
-        <hr class="wiki-divider" />
-
-        <div class="wiki-content-wrapper">
-            @if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl) || generatedArticle.InfoboxFacts.Count > 0)
-            {
-                <div class="wiki-infobox">
-                    <div class="infobox-header">@generatedArticle.Title</div>
-                    @if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl))
-                    {
-                        <div class="infobox-image">
-                            <img src="@generatedArticle.ImageDataUrl" alt="@generatedArticle.Title" />
+    @if (searchResults != null)
+    {
+        <div class="search-results">
+            <h2 class="results-heading">
+                @if (searchResults.Count == 0)
+                {
+                    <span>No results found for "@searchQuery"</span>
+                }
+                else
+                {
+                    <span>Results for "@searchQuery"</span>
+                }
+            </h2>
+            <div class="search-results-list">
+                @foreach (var article in searchResults)
+                {
+                    <a href="/wiki/@article.Slug" class="article-card">
+                        @if (!string.IsNullOrEmpty(article.ImageUrl))
+                        {
+                            <img src="@article.ImageUrl" alt="@article.Title" class="article-card-image" />
+                        }
+                        <div class="article-card-body">
+                            <h3>@article.Title</h3>
+                            <span class="article-card-date">@article.CreatedAt.ToString("MMMM d, yyyy")</span>
                         </div>
-                        <div class="infobox-caption">@generatedArticle.ImageDescription</div>
-                    }
-                    @if (generatedArticle.InfoboxFacts.Count > 0)
-                    {
-                        <table class="infobox-facts">
-                            @foreach (var fact in generatedArticle.InfoboxFacts)
-                            {
-                                <tr>
-                                    <th>@fact.Label</th>
-                                    <td>@fact.Value</td>
-                                </tr>
-                            }
-                        </table>
-                    }
+                    </a>
+                }
+            </div>
+            @if (hasMoreResults)
+            {
+                <div class="load-more-container">
+                    <button class="load-more-btn" @onclick="LoadMore" disabled="@isLoadingMore">
+                        @(isLoadingMore ? "Loading..." : "Load More Results")
+                    </button>
                 </div>
             }
-
-            <div class="wiki-body">
-                @foreach (var articleSection in generatedArticle.Sections)
+        </div>
+    }
+    else if (recentArticles != null && recentArticles.Count > 0)
+    {
+        <div class="recent-articles">
+            <h2 class="results-heading">Recent Articles</h2>
+            <div class="recent-articles-list">
+                @foreach (var article in recentArticles)
                 {
-                    @if (articleSection.Heading != null)
-                    {
-                        <h2 class="wiki-section-heading">@articleSection.Heading</h2>
-                    }
-                    @foreach (var paragraph in articleSection.Paragraphs)
-                    {
-                        <p>@paragraph</p>
-                    }
+                    <a href="/wiki/@article.Slug" class="article-card">
+                        @if (!string.IsNullOrEmpty(article.ImageUrl))
+                        {
+                            <img src="@article.ImageUrl" alt="@article.Title" class="article-card-image" />
+                        }
+                        <div class="article-card-body">
+                            <h3>@article.Title</h3>
+                            <span class="article-card-date">@article.CreatedAt.ToString("MMMM d, yyyy")</span>
+                        </div>
+                    </a>
                 }
             </div>
         </div>
-
-        <h2 class="wiki-section-heading" id="sources">
-            <span>Source Articles</span>
-        </h2>
-        <hr class="wiki-section-divider" />
-        <p class="sources-intro">This article was generated by mashing up the following <strong>@sourcePages.Count</strong> real Wikipedia articles:</p>
-        <ol class="wiki-references">
-            @foreach (var sourcePage in sourcePages)
-            {
-                <li>
-                    <a href="@sourcePage.Url" target="_blank" rel="noopener noreferrer">@sourcePage.Title</a>
-                    <span class="ref-extract"> — @Truncate(sourcePage.Extract, 150)</span>
-                </li>
-            }
-        </ol>
-
-        <div class="article-actions">
-            <button class="btn-generate" @onclick="GenerateArticle" disabled="@isLoading">
-                <span class="btn-icon">🎲</span>
-                Generate Another
-            </button>
-        </div>
-    </div>
-}
-
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="error-banner">
-        <span class="error-icon">⚠️</span>
-        <div>
-            <strong>Something went wrong</strong>
-            <p>@errorMessage</p>
-        </div>
-        <button class="btn-generate btn-small" @onclick="GenerateArticle">Try Again</button>
-    </div>
-}
+    }
+</div>
 
 @code {
-    private GeneratedArticle? generatedArticle;
-    private List<WikipediaPage> sourcePages = new();
-    private bool isLoading;
-    private string statusMessage = "";
-    private string? errorMessage;
-    private int currentStep;
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? QueryParam { get; set; }
 
-    private async Task GenerateArticle()
+    private const int PageSize = 15;
+    private string searchQuery = "";
+    private List<SavedArticleSummary>? searchResults;
+    private List<SavedArticleSummary>? recentArticles;
+    private bool hasMoreResults;
+    private bool isLoadingMore;
+
+    protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
-        errorMessage = null;
-        generatedArticle = null;
-        sourcePages = new();
-        currentStep = 0;
-
-        try
+        if (!string.IsNullOrWhiteSpace(QueryParam))
         {
-            // Step 1: Fetch random Wikipedia pages
-            currentStep = 1;
-            statusMessage = "Fetching 4 random Wikipedia articles...";
-            StateHasChanged();
-
-            sourcePages = await WikipediaService.GetRandomPagesAsync(4);
-
-            // Step 2: Generate mashup article with Gemini
-            currentStep = 2;
-            statusMessage = "Gemini is writing a mashup article...";
-            StateHasChanged();
-
-            generatedArticle = await GeminiService.GenerateMashupArticleAsync(sourcePages);
-
-            // Step 3: Generate image with Nano Banana
-            currentStep = 3;
-            statusMessage = "Nano Banana is generating an image...";
-            StateHasChanged();
-
-            var imageDataUrl = await GeminiService.GenerateImageAsync(generatedArticle.ImageDescription);
-            generatedArticle.ImageDataUrl = imageDataUrl;
-
-            currentStep = 4;
+            searchQuery = QueryParam;
+            await Search();
         }
-        catch (Exception ex)
+        else
         {
-            errorMessage = ex.Message;
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
+            try
+            {
+                recentArticles = await ArticleStorageService.GetRecentArticlesAsync(10);
+            }
+            catch
+            {
+                recentArticles = new();
+            }
         }
     }
 
-    private static string Truncate(string text, int maxLength)
+    private async Task Search()
     {
-        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
-            return text;
-        return text[..maxLength].TrimEnd() + "…";
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            searchResults = null;
+            hasMoreResults = false;
+            return;
+        }
+
+        try
+        {
+            searchResults = await ArticleStorageService.SearchArticlesAsync(searchQuery.Trim(), 0, PageSize);
+            hasMoreResults = searchResults.Count == PageSize;
+        }
+        catch
+        {
+            searchResults = new();
+            hasMoreResults = false;
+        }
+    }
+
+    private async Task LoadMore()
+    {
+        if (searchResults == null || isLoadingMore) return;
+
+        isLoadingMore = true;
+        try
+        {
+            var moreResults = await ArticleStorageService.SearchArticlesAsync(
+                searchQuery.Trim(), searchResults.Count, PageSize);
+            searchResults.AddRange(moreResults);
+            hasMoreResults = moreResults.Count == PageSize;
+        }
+        catch
+        {
+            hasMoreResults = false;
+        }
+        finally
+        {
+            isLoadingMore = false;
+        }
     }
 }
