@@ -72,5 +72,34 @@ public class WikipediaService : IWikipediaService
 
         return result.Take(count).ToList();
     }
+
+    public async Task<WikipediaPage?> GetPageByTitleAsync(string title)
+    {
+        var encodedTitle = Uri.EscapeDataString(title.Trim());
+        var url = $"https://en.wikipedia.org/w/api.php?action=query&titles={encodedTitle}&prop=extracts&exintro=true&explaintext=true&format=json&origin=*&redirects=1";
+        var response = await _httpClient.GetFromJsonAsync<JsonElement>(url);
+
+        var pages = response.GetProperty("query").GetProperty("pages");
+        foreach (var page in pages.EnumerateObject())
+        {
+            if (page.Name == "-1") return null;
+
+            var pageTitle = page.Value.GetProperty("title").GetString() ?? "";
+            var extract = page.Value.TryGetProperty("extract", out var ext) ? ext.GetString() ?? "" : "";
+            var pageId = page.Value.GetProperty("pageid").GetInt32();
+
+            if (string.IsNullOrWhiteSpace(extract) || extract.Length <= 50)
+                return null;
+
+            return new WikipediaPage
+            {
+                Title = pageTitle,
+                Extract = extract,
+                PageId = pageId
+            };
+        }
+
+        return null;
+    }
 }
 

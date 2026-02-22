@@ -1,5 +1,5 @@
 /* ============================================
-   InfoGen - Wikipedia Mashup Generator Styles
+   Ficipedia - Wikipedia Mashup Generator Styles
    ============================================ */
 
 /* === Base === */
@@ -47,6 +47,114 @@ a.btn-save:hover {
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
+}
+
+.generator-panel {
+    text-align: left;
+    padding: 2rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.generator-title {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #202122;
+    font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
+}
+
+.generator-hint {
+    margin: 0;
+    font-size: 14px;
+    color: #72777d;
+    line-height: 1.5;
+}
+
+.mode-toggle {
+    display: flex;
+    gap: 0;
+    border: 2px solid #3366cc;
+    border-radius: 3px;
+    overflow: hidden;
+    align-self: flex-start;
+}
+
+.mode-btn {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: none;
+    background: #fff;
+    color: #3366cc;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mode-btn.active {
+    background: #3366cc;
+    color: #fff;
+}
+
+.mode-btn:not(.active):hover {
+    background: #eaf0fb;
+}
+
+.manual-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.manual-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.manual-input-label {
+    font-weight: 600;
+    color: #54595d;
+    min-width: 1.5rem;
+    text-align: right;
+}
+
+.manual-input {
+    flex: 1;
+    max-width: 700px;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.95rem;
+    border: 1px solid #a2a9b1;
+    border-radius: 3px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.manual-input:focus {
+    border-color: #3366cc;
+}
+
+.manual-input.invalid {
+    border-color: #d33;
+}
+
+.manual-input-error {
+    font-size: 0.8rem;
+    color: #d33;
+    white-space: nowrap;
+}
+
+.manual-input-optional {
+    font-size: 0.8rem;
+    color: #a2a9b1;
+    font-style: italic;
+    white-space: nowrap;
+}
+
+.generator-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .hero-logo {
@@ -511,12 +619,27 @@ a.btn-save:hover {
         0 3px 0 #a0a0a0,
         0 4px 0 #909090,
         0 5px 6px rgba(0, 0, 0, 0.15);
+}
+
+.logo-wrapper {
+    display: inline-block;
+    position: relative;
     animation: bob 3s ease-in-out infinite;
 }
 
 @keyframes bob {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-6px); }
+}
+
+.logo-quip {
+    font-size: 1.1rem;
+    font-style: italic;
+    color: #54595d;
+    margin: 0;
+    user-select: none;
+    transition: opacity 0.4s ease;
+    min-height: 1.6em;
 }
 
 .home-tagline {
