@@ -39,7 +39,7 @@
         </div>
 
         <div class="generator-actions">
-            <button class="btn-generate" @onclick="GenerateArticle" disabled="@(CanGenerate ? null : true)">
+            <button class="btn-generate" @onclick="GenerateArticle" disabled="@(!CanGenerate)">
                 Generate Mashup Article
             </button>
         </div>

@@ -1,0 +1,15 @@
+@page "/random"
+@using InfoGen.Services
+@inject IArticleStorageService ArticleStorageService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var slug = await ArticleStorageService.GetRandomArticleSlugAsync();
+        var url = !string.IsNullOrEmpty(slug) ? "/wiki/" + slug : "/";
+        NavigationManager.NavigateTo(url, replace: true, forceLoad: true);
+    }
+}

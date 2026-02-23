@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using InfoGen.Components;
 using InfoGen.Data;
 using InfoGen.Services;
+using Microsoft.AspNetCore.Identity;
+using InfoGen.Components.Account;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,10 +12,30 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<IdentityRedirectManager>();
+builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+})
+    .AddIdentityCookies();
+
 // Database
 builder.Services.AddDbContext<InfoGenDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"),
         sqlOptions => sqlOptions.EnableRetryOnFailure()));
+
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = true;
+    options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
+})
+    .AddEntityFrameworkStores<InfoGenDbContext>()
+    .AddSignInManager()
+    .AddDefaultTokenProviders();
 
 // Register HttpClient and services
 builder.Services.AddHttpClient<IWikipediaService, WikipediaService>(client =>
@@ -55,5 +78,7 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapAdditionalIdentityEndpoints();
 
 app.Run();

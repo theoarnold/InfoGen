@@ -12,6 +12,7 @@
     border-bottom: 1px solid #a7d7f9;
     padding: 0.2rem 1rem;
     box-shadow: none;
+    min-height: 2.75rem;
 }
 
 .header-content {
@@ -48,6 +49,12 @@
     font-size: 0.75rem;
     color: #54595d;
     font-style: italic;
+}
+
+@media (max-width: 767px) {
+    .header-tagline {
+        display: none;
+    }
 }
 
 .header-search {

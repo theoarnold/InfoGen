@@ -1,12 +1,14 @@
 @inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@implements IDisposable
 
-<div class="page-wrapper">
+<div class="page-wrapper @(IsHome ? "on-home-page" : "")">
     <header class="site-header">
         <div class="header-content">
             <a class="site-brand" href="">
                 <span class="brand-text">Ficipedia</span>
             </a>
-            <span class="header-tagline">the fictional encyclopedia</span>
+            <span class="header-tagline">The fictional encyclopedia</span>
             <form class="header-search" action="/" method="get">
                 <input type="text" name="q" placeholder="Search articles..." class="header-search-input" />
                 <button type="submit" class="header-search-btn">Search</button>
@@ -25,3 +27,29 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+@code {
+    private bool IsHome
+    {
+        get
+        {
+            var path = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).TrimStart('/');
+            return string.IsNullOrEmpty(path) || path.StartsWith("?", StringComparison.Ordinal);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

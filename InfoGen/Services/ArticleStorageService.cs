@@ -118,6 +118,19 @@ public partial class ArticleStorageService : IArticleStorageService
             .ToListAsync();
     }
 
+    public async Task<string?> GetRandomArticleSlugAsync()
+    {
+        var count = await _dbContext.SavedArticles.CountAsync();
+        if (count == 0) return null;
+        var skip = Random.Shared.Next(0, count);
+        return await _dbContext.SavedArticles
+            .OrderBy(a => a.CreatedAt)
+            .Skip(skip)
+            .Take(1)
+            .Select(a => a.Slug)
+            .FirstOrDefaultAsync();
+    }
+
     private async Task<string> GenerateUniqueSlugAsync(string title)
     {
         var slug = Slugify(title);

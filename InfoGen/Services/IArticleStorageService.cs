@@ -8,6 +8,7 @@ public interface IArticleStorageService
     Task<List<SavedArticleSummary>> SearchArticlesAsync(string query, int skip = 0, int take = 15);
     Task<SavedArticleDetail?> GetArticleBySlugAsync(string slug);
     Task<List<SavedArticleSummary>> GetRecentArticlesAsync(int count = 10);
+    Task<string?> GetRandomArticleSlugAsync();
 }
 
 public class SavedArticleSummary

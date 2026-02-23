@@ -1,9 +1,10 @@
 using InfoGen.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace InfoGen.Data;
 
-public class InfoGenDbContext : DbContext
+public class InfoGenDbContext : IdentityDbContext<ApplicationUser>
 {
     public InfoGenDbContext(DbContextOptions<InfoGenDbContext> options) : base(options) { }
 
@@ -11,6 +12,7 @@ public class InfoGenDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<SavedArticleEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
