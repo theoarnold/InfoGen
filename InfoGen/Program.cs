@@ -72,6 +72,14 @@ builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
 builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
 builder.Services.AddScoped<IArticleStorageService, ArticleStorageService>();
 
+// Stripe
+if (!string.IsNullOrEmpty(config["Stripe:SecretKey"]))
+{
+    builder.Services.AddScoped<IStripeService, StripeService>();
+}
+
+builder.Services.AddScoped<IUsageService, UsageService>();
+
 var app = builder.Build();
 
 try
@@ -101,5 +109,40 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapAdditionalIdentityEndpoints();
+
+var stripeGroup = app.MapGroup("/stripe").RequireAuthorization();
+
+stripeGroup.MapPost("/create-checkout", async (
+    HttpContext context,
+    UserManager<ApplicationUser> userManager,
+    IStripeService stripeService) =>
+{
+    var user = await userManager.GetUserAsync(context.User);
+    if (user is null) return Results.Redirect("/Account/Login");
+
+    var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+    var checkoutUrl = await stripeService.CreateCheckoutSessionAsync(
+        user,
+        successUrl: $"{baseUrl}/Account/Profile?status=subscribed",
+        cancelUrl: $"{baseUrl}/Account/Profile?status=cancelled");
+
+    return Results.Redirect(checkoutUrl);
+});
+
+stripeGroup.MapPost("/create-portal", async (
+    HttpContext context,
+    UserManager<ApplicationUser> userManager,
+    IStripeService stripeService) =>
+{
+    var user = await userManager.GetUserAsync(context.User);
+    if (user is null) return Results.Redirect("/Account/Login");
+
+    var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+    var portalUrl = await stripeService.CreatePortalSessionAsync(
+        user,
+        returnUrl: $"{baseUrl}/Account/Profile");
+
+    return Results.Redirect(portalUrl);
+});
 
 app.Run();

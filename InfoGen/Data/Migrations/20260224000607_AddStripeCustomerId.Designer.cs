@@ -4,6 +4,7 @@ using InfoGen.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InfoGen.Data.Migrations
 {
     [DbContext(typeof(InfoGenDbContext))]
-    partial class InfoGenDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260224000607_AddStripeCustomerId")]
+    partial class AddStripeCustomerId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -89,26 +92,6 @@ namespace InfoGen.Data.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
-                });
-
-            modelBuilder.Entity("InfoGen.Entities.MonthlyGenerationUsage", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Month")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Count")
-                        .HasColumnType("int");
-
-                    b.HasKey("UserId", "Year", "Month");
-
-                    b.ToTable("MonthlyGenerationUsage");
                 });
 
             modelBuilder.Entity("InfoGen.Entities.SavedArticleEntity", b =>

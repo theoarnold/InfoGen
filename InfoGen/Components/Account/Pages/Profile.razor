@@ -2,9 +2,11 @@
 
 @using Microsoft.AspNetCore.Identity
 @using InfoGen.Data
+@using InfoGen.Services
 @using InfoGen.Components.Account.Shared
 
-@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IServiceProvider ServiceProvider
 
 <PageTitle>Profile - Ficipedia</PageTitle>
 
@@ -13,6 +15,49 @@
         <div class="account-page">
             <h1>Profile</h1>
             <p class="account-subheading">Hello @(context.User.Identity?.Name ?? "User")!</p>
+
+            @if (!string.IsNullOrEmpty(statusMessage))
+            {
+                <div class="account-alert @statusClass" role="alert">@statusMessage</div>
+            }
+
+            <div class="profile-subscription">
+                <div class="subscription-header">
+                    <h2>Subscription</h2>
+                    @if (subscriptionStatus == "active")
+                    {
+                        <div class="subscription-badge active">Active</div>
+                    }
+                    else
+                    {
+                        <div class="subscription-badge inactive">Inactive</div>
+                    }
+                </div>
+                @if (subscriptionStatus == "active")
+                {
+                    <p class="subscription-info">You have an active Ficipedia Generator subscription.</p>
+                    <form method="post" action="/stripe/create-portal" class="subscription-form">
+                        <AntiforgeryToken />
+                        <button type="submit" class="account-external-btn subscription-manage-btn">Manage Subscription</button>
+                    </form>
+                }
+                else
+                {
+                    <p class="subscription-info">Subscribe to generate mashup articles.</p>
+                    @if (stripeConfigured)
+                    {
+                        <form method="post" action="/stripe/create-checkout" class="subscription-form">
+                            <AntiforgeryToken />
+                            <button type="submit" class="account-external-btn subscription-subscribe-btn">Subscribe - $9/month</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <p class="subscription-info" style="color: #72777d;">Subscriptions are not yet available.</p>
+                    }
+                }
+            </div>
+
             <form method="post" action="Account/Logout" class="account-logout-form">
                 <AntiforgeryToken />
                 <input type="hidden" name="returnUrl" value="/" />
@@ -24,3 +69,39 @@
         <RedirectToLogin />
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private string subscriptionStatus = "none";
+    private bool stripeConfigured;
+    private string? statusMessage;
+    private string statusClass = "success";
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "status")]
+    private string? Status { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stripeService = ServiceProvider.GetService<IStripeService>();
+        stripeConfigured = stripeService is not null;
+
+        var user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is not null && stripeService is not null)
+        {
+            subscriptionStatus = await stripeService.GetSubscriptionStatusAsync(user);
+        }
+
+        if (!string.IsNullOrEmpty(Status))
+        {
+            (statusMessage, statusClass) = Status switch
+            {
+                "subscribed" => ("Successfully subscribed! You can now generate articles.", "success"),
+                "cancelled" => ("Checkout was cancelled.", "danger"),
+                "subscribe_required" => ("You need an active subscription to generate articles. Subscribe below!", "danger"),
+                _ => (null, "success")
+            };
+        }
+    }
+}

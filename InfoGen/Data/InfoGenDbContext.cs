@@ -9,6 +9,7 @@ public class InfoGenDbContext : IdentityDbContext<ApplicationUser>
     public InfoGenDbContext(DbContextOptions<InfoGenDbContext> options) : base(options) { }
 
     public DbSet<SavedArticleEntity> SavedArticles => Set<SavedArticleEntity>();
+    public DbSet<MonthlyGenerationUsage> MonthlyGenerationUsage => Set<MonthlyGenerationUsage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +22,11 @@ public class InfoGenDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.Slug).IsUnique();
             entity.Property(e => e.ImageDescription).HasMaxLength(1000);
             entity.Property(e => e.ImageUrl).HasMaxLength(2000);
+        });
+        modelBuilder.Entity<MonthlyGenerationUsage>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.Year, e.Month });
+            entity.Property(e => e.UserId).HasMaxLength(450);
         });
     }
 }

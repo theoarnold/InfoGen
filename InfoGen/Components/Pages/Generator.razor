@@ -1,11 +1,14 @@
 @page "/generate"
 @using InfoGen.Models
 @using InfoGen.Services
+@using Microsoft.AspNetCore.Identity
+@using InfoGen.Data
 @inject IWikipediaService WikipediaService
 @inject IGeminiService GeminiService
 @inject IArticleStorageService ArticleStorageService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceProvider ServiceProvider
 @rendermode InteractiveServer
 
 <PageTitle>@(generatedArticle != null ? $"{generatedArticle.Title} - Ficipedia" : "Generate Article - Ficipedia")</PageTitle>
@@ -249,6 +252,22 @@ else if (isLoading)
             return;
         }
 
+        var stripeService = ServiceProvider.GetService<IStripeService>();
+        if (stripeService is not null)
+        {
+            var userManager = ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = await userManager.FindByNameAsync(authState.User.Identity!.Name!);
+            if (user is not null)
+            {
+                var subStatus = await stripeService.GetSubscriptionStatusAsync(user);
+                if (subStatus != "active")
+                {
+                    Navigation.NavigateTo("/Account/Profile?status=subscribe_required", forceLoad: true);
+                    return;
+                }
+            }
+        }
+
         isLoading = true;
         isSaved = false;
         savedSlug = null;
@@ -299,19 +318,19 @@ else if (isLoading)
             }
             else
             {
-                statusMessage = "Fetching 4 random Wikipedia articles...";
+                statusMessage = "Fetching Wikipedia articles...";
                 StateHasChanged();
                 sourcePages = await WikipediaService.GetRandomPagesAsync(4);
             }
 
             currentStep = 2;
-            statusMessage = "Gemini is writing a mashup article...";
+            statusMessage = "Writing an article...";
             StateHasChanged();
 
             generatedArticle = await GeminiService.GenerateMashupArticleAsync(sourcePages);
 
             currentStep = 3;
-            statusMessage = "Nano Banana is generating an image...";
+            statusMessage = "Generating an image...";
             StateHasChanged();
 
             var imageDataUrl = await GeminiService.GenerateImageAsync(generatedArticle.ImageDescription);
