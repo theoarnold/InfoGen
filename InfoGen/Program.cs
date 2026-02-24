@@ -16,12 +16,33 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-builder.Services.AddAuthentication(options =>
+var config = builder.Configuration;
+
+var authBuilder = builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
     options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-})
-    .AddIdentityCookies();
+});
+
+// External login providers (see https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/)
+if (!string.IsNullOrEmpty(config["Authentication:Google:ClientId"]))
+{
+    authBuilder.AddGoogle(googleOptions =>
+    {
+        googleOptions.ClientId = config["Authentication:Google:ClientId"]!;
+        googleOptions.ClientSecret = config["Authentication:Google:ClientSecret"]!;
+    });
+}
+if (!string.IsNullOrEmpty(config["Authentication:Microsoft:ClientId"]))
+{
+    authBuilder.AddMicrosoftAccount(microsoftOptions =>
+    {
+        microsoftOptions.ClientId = config["Authentication:Microsoft:ClientId"]!;
+        microsoftOptions.ClientSecret = config["Authentication:Microsoft:ClientSecret"]!;
+    });
+}
+
+authBuilder.AddIdentityCookies();
 
 // Database
 builder.Services.AddDbContext<InfoGenDbContext>(options =>

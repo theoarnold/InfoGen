@@ -5,13 +5,28 @@
 @inject IGeminiService GeminiService
 @inject IArticleStorageService ArticleStorageService
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @rendermode InteractiveServer
 
 <PageTitle>@(generatedArticle != null ? $"{generatedArticle.Title} - Ficipedia" : "Generate Article - Ficipedia")</PageTitle>
 
 @if (!isLoading && generatedArticle == null)
 {
-    <div class="hero-section generator-panel">
+    <div class="hero-section generator-panel generator-form-wrapper">
+        <div class="generator-auth-bar">
+            <div class="generator-form-auth">
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="auth-greeting">Hello, @(context.User.Identity?.Name ?? "User")!</span>
+                        <a href="Account/Profile" class="auth-profile-link">Profile</a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <span></span>
+                        <a href="Account/Login" class="auth-login-btn">Login</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
         <h2 class="generator-title">Wiki Generator</h2>
         <p class="generator-hint">Paste Wikipedia article by URLs or exact name below. At least 2 URLs are required if you choose to specify articles.</p>
         <p class="generator-hint">Leave all boxes blank to randomize</p>
@@ -227,6 +242,13 @@ else if (isLoading)
 
     private async Task GenerateArticle()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState?.User?.Identity?.IsAuthenticated != true)
+        {
+            Navigation.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString("/generate")}", forceLoad: true);
+            return;
+        }
+
         isLoading = true;
         isSaved = false;
         savedSlug = null;

@@ -1,0 +1,26 @@
+@page "/Account/Profile"
+
+@using Microsoft.AspNetCore.Identity
+@using InfoGen.Data
+@using InfoGen.Components.Account.Shared
+
+@inject SignInManager<ApplicationUser> SignInManager
+
+<PageTitle>Profile - Ficipedia</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="account-page">
+            <h1>Profile</h1>
+            <p class="account-subheading">Hello @(context.User.Identity?.Name ?? "User")!</p>
+            <form method="post" action="Account/Logout" class="account-logout-form">
+                <AntiforgeryToken />
+                <input type="hidden" name="returnUrl" value="/" />
+                <button type="submit" class="account-external-btn account-logout-btn">Log out</button>
+            </form>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <RedirectToLogin />
+    </NotAuthorized>
+</AuthorizeView>

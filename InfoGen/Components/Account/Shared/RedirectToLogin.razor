@@ -1,8 +1,10 @@
-﻿@inject NavigationManager NavigationManager
+@inject NavigationManager NavigationManager
 
 @code {
     protected override void OnInitialized()
     {
-        NavigationManager.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad: true);
+        var returnPath = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri).TrimStart('/');
+        if (string.IsNullOrEmpty(returnPath) || returnPath == "/") returnPath = "/Account/Profile";
+        NavigationManager.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString(returnPath)}", forceLoad: true);
     }
 }

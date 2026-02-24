@@ -22,6 +22,57 @@ namespace InfoGen.Components.Account
 
             var accountGroup = endpoints.MapGroup("/Account");
 
+            accountGroup.MapGet("/ExternalLogin", async (
+                HttpContext context,
+                [FromQuery] string? returnUrl,
+                [FromQuery] string? action,
+                [FromServices] SignInManager<ApplicationUser> signInManager,
+                [FromServices] UserManager<ApplicationUser> userManager) =>
+            {
+                if (action != ExternalLogin.LoginCallbackAction)
+                    return Results.BadRequest();
+
+                var info = await signInManager.GetExternalLoginInfoAsync();
+                if (info is null)
+                    return Results.Redirect("/Account/Login?error=External login failure.");
+
+                var localPath = string.IsNullOrEmpty(returnUrl) || returnUrl.Contains("://", StringComparison.Ordinal)
+                    ? "/Account/Profile"
+                    : returnUrl.StartsWith('/') ? returnUrl : $"/{returnUrl.TrimStart('/')}";
+
+                var result = await signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
+                if (result.Succeeded)
+                {
+                    await signInManager.UpdateExternalAuthenticationTokensAsync(info);
+                    return Results.LocalRedirect(localPath);
+                }
+                if (result.IsLockedOut)
+                    return Results.Redirect("/Account/Login?error=Account locked out.");
+
+                // New user: create account from external login
+                var email = info.Principal.FindFirstValue(System.Security.Claims.ClaimTypes.Email)
+                    ?? info.Principal.FindFirstValue("email");
+                if (string.IsNullOrEmpty(email))
+                    return Results.Redirect("/Account/Login?error=Email not supplied by the external provider.");
+
+                var user = await userManager.FindByEmailAsync(email);
+                if (user is null)
+                {
+                    user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
+                    var createResult = await userManager.CreateAsync(user);
+                    if (!createResult.Succeeded)
+                        return Results.Redirect("/Account/Login?error=" + Uri.EscapeDataString(string.Join(" ", createResult.Errors.Select(e => e.Description))));
+                }
+
+                var addLoginResult = await userManager.AddLoginAsync(user, info);
+                if (!addLoginResult.Succeeded)
+                    return Results.Redirect("/Account/Login?error=Could not link external login.");
+
+                await signInManager.SignInAsync(user, isPersistent: false);
+                await signInManager.UpdateExternalAuthenticationTokensAsync(info);
+                return Results.LocalRedirect(localPath);
+            }).AllowAnonymous();
+
             accountGroup.MapPost("/PerformExternalLogin", (
                 HttpContext context,
                 [FromServices] SignInManager<ApplicationUser> signInManager,
@@ -44,10 +95,14 @@ namespace InfoGen.Components.Account
             accountGroup.MapPost("/Logout", async (
                 ClaimsPrincipal user,
                 [FromServices] SignInManager<ApplicationUser> signInManager,
-                [FromForm] string returnUrl) =>
+                [FromForm] string? returnUrl) =>
             {
                 await signInManager.SignOutAsync();
-                return TypedResults.LocalRedirect($"~/{returnUrl}");
+                // Only allow local paths (no scheme/host) to prevent open redirect
+                var localPath = string.IsNullOrEmpty(returnUrl) || returnUrl.Contains("://", StringComparison.Ordinal)
+                    ? "/Account/Profile"
+                    : returnUrl.StartsWith('/') ? returnUrl : $"/{returnUrl.TrimStart('/')}";
+                return TypedResults.LocalRedirect(localPath);
             });
 
             accountGroup.MapPost("/PasskeyCreationOptions", async (

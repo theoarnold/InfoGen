@@ -66,14 +66,72 @@ a.btn-save:hover {
 
 .generator-panel {
     text-align: left;
-    padding: 2rem 2.5rem;
+    padding: 0 2.5rem 2rem 2.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
 }
 
+.generator-form-wrapper {
+    position: relative;
+}
+
+.generator-auth-bar {
+    margin: 0 -2.5rem 0 -2.5rem;
+    padding: 0.5rem 2.5rem 0.5rem 2.5rem;
+    background: #f0f0f0;
+    border-bottom: 1px solid #a2a9b1;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.generator-form-auth {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 2.25rem;
+    white-space: nowrap;
+    margin-bottom: 0.2rem;
+}
+
+.generator-form-auth .auth-greeting {
+    font-size: 0.9rem;
+    color: #54595d;
+}
+
+.generator-form-auth .auth-profile-link {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #3366cc;
+    text-decoration: none;
+}
+
+.generator-form-auth .auth-profile-link:hover {
+    text-decoration: underline;
+}
+
+.generator-form-auth .auth-login-btn {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    background: #3366cc;
+    text-decoration: none;
+    padding: 0.4rem 0.8rem;
+    border: 2px solid #3366cc;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.generator-form-auth .auth-login-btn:hover {
+    background: #2a52a3;
+    border-color: #2a52a3;
+    color: #fff;
+    text-decoration: none;
+}
+
 .generator-title {
-    margin: 0 0 0.25rem 0;
+    margin: 0.15rem 0 0.25rem 0;
     font-size: 1.5rem;
     font-weight: 700;
     color: #202122;
@@ -582,6 +640,15 @@ a.btn-save:hover {
         padding: 2rem 1rem;
     }
 
+    .hero-section.generator-panel {
+        padding: 0 1rem 2rem 1rem;
+    }
+
+    .generator-auth-bar {
+        margin: 0 -1rem 0 -1rem;
+        padding: 0.5rem 1rem 0.5rem 1rem;
+    }
+
     .hero-logo h1 {
         font-size: 2rem;
     }
@@ -893,6 +960,227 @@ a.btn-save:hover {
 .article-card-body .article-card-date {
     font-size: 0.85rem;
     color: #72777d;
+}
+
+/* === Account pages (Login, Register, etc.) - match site style === */
+.account-page {
+    width: 100%;
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem 2.5rem;
+    background: #ffffff;
+    border: 1px solid #a7d7f9;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.account-page h1 {
+    font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.account-page .account-subheading {
+    margin: -0.25rem 0 1rem 0;
+    font-size: 1.1rem;
+    color: #54595d;
+}
+
+.account-page .account-logout-form {
+    margin-top: 1.25rem;
+}
+
+.account-page .account-logout-btn {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: #72777d;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.account-page .account-logout-btn:hover {
+    background: #54595d;
+}
+
+.account-page h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #202122;
+    margin: 1rem 0 0.5rem 0;
+}
+
+.account-page .account-divider {
+    border: none;
+    border-top: 1px solid #a2a9b1;
+    margin: 1rem 0;
+}
+
+.account-page .account-form-group {
+    margin-bottom: 1rem;
+}
+
+.account-page .account-form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #54595d;
+    margin-bottom: 0.25rem;
+}
+
+.account-page .account-input {
+    width: 100%;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.95rem;
+    border: 1px solid #a2a9b1;
+    border-radius: 3px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.account-page .account-input:focus {
+    border-color: #3366cc;
+}
+
+.account-page .account-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.account-page .account-checkbox-row input {
+    width: 1rem;
+    height: 1rem;
+}
+
+.account-page .account-submit {
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: #3366cc;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.account-page .account-submit:hover {
+    background: #2a56b3;
+}
+
+.account-page .account-links {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+.account-page .account-links a {
+    color: #0645ad;
+}
+
+.account-page .account-links a:hover {
+    text-decoration: underline;
+}
+
+.account-page .validation-message {
+    font-size: 0.85rem;
+    color: #d33;
+    margin-top: 0.25rem;
+}
+
+.account-page .account-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 3px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.account-page .account-alert.danger {
+    background: #fee;
+    border: 1px solid #fcc;
+    color: #c00;
+}
+
+.account-page .account-alert.success {
+    background: #efe;
+    border: 1px solid #cfc;
+    color: #060;
+}
+
+.account-page .account-link-btn {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #3366cc;
+    text-decoration: none;
+    padding: 0.4rem 0.8rem;
+    border: 2px solid #3366cc;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.account-page .account-link-btn:hover {
+    background: #3366cc;
+    color: #fff;
+    text-decoration: none;
+}
+
+.account-page .account-external-form {
+    margin-top: 0;
+}
+
+.account-page .account-external-buttons {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}
+
+.account-page .account-external-btn {
+    flex: 1;
+    min-width: 180px;
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.account-page .account-external-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.account-page .account-external-icon svg {
+    display: block;
+}
+
+.account-page .account-external-btn:hover {
+    opacity: 0.92;
+}
+
+.account-page .account-external-google {
+    background: #3366cc;
+    color: #fff;
+}
+
+.account-page .account-external-google:hover {
+    background: #2a52a3;
+}
+
+.account-page .account-external-microsoft {
+    background: #2f2f2f;
+    color: #fff;
 }
 
 /* === Blazor Error Boundary === */
