@@ -21,3 +21,4 @@ project.lock.json
 # OS
 .DS_Store
 Thumbs.db
+/InfoGen/Properties/PublishProfiles/ficipedia - Zip Deploy.pubxml
