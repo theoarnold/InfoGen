@@ -20,7 +20,13 @@
             <div class="generator-form-auth">
                 <AuthorizeView>
                     <Authorized>
-                        <span class="auth-greeting">Hello, @(context.User.Identity?.Name ?? "User")!</span>
+                        <span class="auth-greeting">
+                            Hello, @(context.User.Identity?.Name ?? "User")!
+                            @if (subscriptionStatus == "active")
+                            {
+                                <span class="pro-badge" title="Active subscriber">PRO</span>
+                            }
+                        </span>
                         <a href="Account/Profile" class="auth-profile-link">Profile</a>
                     </Authorized>
                     <NotAuthorized>
@@ -39,11 +45,32 @@
                 var idx = i;
                 <div class="manual-input-row">
                     <span class="manual-input-label">@(idx + 1).</span>
-                    <input type="text"
-                           class="@ManualInputClass(idx)"
-                           placeholder="e.g: https://en.wikipedia.org/wiki/Gordon_Brown"
-                           value="@manualUrls[idx]"
-                           @oninput="@(e => OnManualUrlChanged(idx, e.Value?.ToString()))" />
+                    <div class="manual-input-suggest-wrapper">
+                        <input type="text"
+                               class="@ManualInputClass(idx)"
+                               placeholder="e.g: https://en.wikipedia.org/wiki/Gordon_Brown or start typing to search"
+                               value="@manualUrls[idx]"
+                               @oninput="@(e => OnManualUrlChanged(idx, e.Value?.ToString()))"
+                               @onblur="@(() => CloseSuggestionsAfterDelay(idx))" />
+                        @if (suggestionsLoading[idx])
+                        {
+                            <span class="suggest-loading">Searching...</span>
+                        }
+                        @if (suggestions[idx] != null && suggestions[idx]!.Count > 0)
+                        {
+                            <ul class="suggest-dropdown" role="listbox">
+                                @foreach (var title in suggestions[idx]!)
+                                {
+                                    <li role="option"
+                                        class="suggest-item"
+                                        @onmousedown:preventDefault
+                                        @onclick="@(() => SelectSuggestion(idx, title))">
+                                        @title
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
                     @if (manualValidation[idx] == false)
                     {
                         <span class="manual-input-error">Not a valid Wikipedia article</span>
@@ -202,7 +229,27 @@ else if (isLoading)
     private string[] manualUrls = new string[4] { "", "", "", "" };
     private bool?[] manualValidation = new bool?[4] { null, null, null, null };
 
+    private List<string>?[] suggestions = new List<string>?[4] { null, null, null, null };
+    private bool[] suggestionsLoading = new bool[4];
+    private CancellationTokenSource?[] suggestCts = new CancellationTokenSource?[4];
+
+    private string subscriptionStatus = "none";
+
     private int FilledUrlCount => manualUrls.Count(u => !string.IsNullOrWhiteSpace(u));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState?.User?.Identity?.IsAuthenticated != true) return;
+
+        var stripeService = ServiceProvider.GetService<IStripeService>();
+        if (stripeService is null) return;
+
+        var userManager = ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = await userManager.FindByNameAsync(authState.User.Identity!.Name!);
+        if (user is not null)
+            subscriptionStatus = await stripeService.GetSubscriptionStatusAsync(user);
+    }
 
     private bool CanGenerate
     {
@@ -223,6 +270,60 @@ else if (isLoading)
     {
         manualUrls[index] = value ?? "";
         manualValidation[index] = null;
+
+        suggestCts[index]?.Cancel();
+        suggestCts[index]?.Dispose();
+        suggestCts[index] = new CancellationTokenSource();
+        var cts = suggestCts[index];
+        _ = RunSearchAfterDelayAsync(index, value ?? "", cts!.Token);
+    }
+
+    private async Task RunSearchAfterDelayAsync(int index, string value, CancellationToken cancel)
+    {
+        try { await Task.Delay(300, cancel); }
+        catch (OperationCanceledException) { return; }
+
+        if (string.IsNullOrWhiteSpace(value) || value.Trim().Length < 2)
+        {
+            suggestions[index] = new List<string>();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        suggestionsLoading[index] = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var results = await WikipediaService.SearchTitlesAsync(value.Trim(), 10);
+            if (!cancel.IsCancellationRequested)
+                suggestions[index] = results;
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            suggestionsLoading[index] = false;
+            if (!cancel.IsCancellationRequested)
+                await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void SelectSuggestion(int index, string title)
+    {
+        manualUrls[index] = title;
+        manualValidation[index] = null;
+        suggestions[index] = null;
+        StateHasChanged();
+    }
+
+    private async Task CloseSuggestionsAfterDelay(int index)
+    {
+        await Task.Delay(200);
+        if (suggestions[index] != null)
+        {
+            suggestions[index] = null;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private string ManualInputClass(int index)

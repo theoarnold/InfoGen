@@ -3,11 +3,8 @@
    ============================================ */
 
 /* === Base === */
-html {
-    scrollbar-gutter: stable;
-}
-
-html, body {
+html,
+body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     font-size: 16px;
     line-height: 1.6;
@@ -225,6 +222,59 @@ a.btn-save:hover {
     white-space: nowrap;
 }
 
+/* Wikipedia suggestion dropdown */
+.manual-input-suggest-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    max-width: 700px;
+}
+
+.manual-input-suggest-wrapper .manual-input {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+.suggest-loading {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    color: #72777d;
+    pointer-events: none;
+}
+
+.suggest-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #a2a9b1;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.suggest-item {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    color: #202122;
+}
+
+.suggest-item:hover {
+    background: #f0f0f0;
+}
+
 .generator-actions {
     display: flex;
     justify-content: flex-end;
@@ -398,6 +448,11 @@ a.btn-save:hover {
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
+}
+
+/* Space below the article block on article page */
+.main-content:has(.wiki-article) {
+    padding-bottom: 2.5rem;
 }
 
 .wiki-title {
@@ -768,8 +823,16 @@ a.btn-save:hover {
         min-height: 1.4em;
     }
 
+    .home-header {
+        margin-bottom: 0.35rem;
+    }
+
+    .search-container {
+        margin-bottom: 0.5rem;
+    }
+
     .recent-articles {
-        margin-top: 2rem;
+        margin-top: 0.25rem;
     }
 
     .recent-articles::after {
@@ -783,6 +846,52 @@ a.btn-save:hover {
 
     .search-box {
         max-width: 100%;
+    }
+
+    /* Recent articles fits on the page (like desktop): lock home to viewport so no document scroll */
+    body:has(.home-page) {
+        overflow: hidden;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+    }
+
+    .home-page {
+        position: fixed;
+        top: 3.5rem; /* below navbar (.site-header) */
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: calc(100% - 3.5rem);
+        overflow: hidden;
+    }
+
+    .home-page-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .search-results {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .recent-articles {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+
+    .recent-articles-list {
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 }
 
@@ -1026,6 +1135,21 @@ a.btn-save:hover {
     background: #f8d7da;
     color: #721c24;
     border: 1px solid #f5c6cb;
+}
+
+/* Yellow PRO badge next to username for subscribers */
+.pro-badge {
+    display: inline-block;
+    margin-left: 0.35rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #6b5a0a;
+    background: #f0e130;
+    border: 1px solid #c9b800;
+    border-radius: 3px;
+    vertical-align: middle;
 }
 
 .subscription-info {

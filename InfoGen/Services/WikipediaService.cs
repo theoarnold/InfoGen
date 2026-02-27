@@ -101,5 +101,44 @@ public class WikipediaService : IWikipediaService
 
         return null;
     }
+
+    // Might need to refactor this
+    public async Task<List<string>> SearchTitlesAsync(string query, int limit = 10)
+    {
+        var q = query?.Trim();
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return new List<string>();
+
+        var encoded = Uri.EscapeDataString(q);
+        var url = $"https://en.wikipedia.org/w/api.php?action=opensearch&search={encoded}&limit={limit}&format=json&origin=*";
+        try
+        {
+            var arr = await _httpClient.GetFromJsonAsync<JsonElement>(url);
+            if (arr.ValueKind != JsonValueKind.Array || arr.GetArrayLength() < 2)
+                return new List<string>();
+
+            var enumerator = arr.EnumerateArray();
+            enumerator.MoveNext();
+            if (!enumerator.MoveNext())
+                return new List<string>();
+            var titles = enumerator.Current;
+            if (titles.ValueKind != JsonValueKind.Array)
+                return new List<string>();
+
+            var list = new List<string>();
+            foreach (var item in titles.EnumerateArray())
+            {
+                var title = item.GetString();
+                if (!string.IsNullOrWhiteSpace(title))
+                    list.Add(title);
+            }
+            return list;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Wikipedia search failed for '{Query}'", q);
+            return new List<string>();
+        }
+    }
 }
 

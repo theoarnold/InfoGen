@@ -14,7 +14,13 @@
     <Authorized>
         <div class="account-page">
             <h1>Profile</h1>
-            <p class="account-subheading">Hello @(context.User.Identity?.Name ?? "User")!</p>
+            <p class="account-subheading">
+                Hello, @(context.User.Identity?.Name ?? "User")!
+                @if (subscriptionStatus == "active")
+                {
+                    <span class="pro-badge" title="Active subscriber">PRO</span>
+                }
+            </p>
 
             @if (!string.IsNullOrEmpty(statusMessage))
             {
