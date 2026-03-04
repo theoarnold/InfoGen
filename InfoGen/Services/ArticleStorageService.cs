@@ -24,7 +24,7 @@ public partial class ArticleStorageService : IArticleStorageService
         _logger = logger;
     }
 
-    public async Task<SavedArticleSummary> SaveArticleAsync(GeneratedArticle article, List<WikipediaPage> sourcePages)
+    public async Task<SavedArticleSummary> SaveArticleAsync(GeneratedArticle article, List<WikipediaPage> sourcePages, string? createdByUserId = null)
     {
         string? imageUrl = null;
         if (!string.IsNullOrEmpty(article.ImageDataUrl))
@@ -50,7 +50,8 @@ public partial class ArticleStorageService : IArticleStorageService
                 p.Url,
                 p.Extract
             })),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = createdByUserId
         };
 
         _dbContext.SavedArticles.Add(entity);
@@ -90,6 +91,17 @@ public partial class ArticleStorageService : IArticleStorageService
 
         if (entity == null) return null;
 
+        string? creatorDisplayName = null;
+        if (!string.IsNullOrEmpty(entity.CreatedByUserId))
+        {
+            var creator = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.Id == entity.CreatedByUserId)
+                .Select(u => u.DisplayName ?? u.Email ?? u.UserName)
+                .FirstOrDefaultAsync();
+            creatorDisplayName = creator;
+        }
+
         return new SavedArticleDetail
         {
             Title = entity.Title,
@@ -99,7 +111,8 @@ public partial class ArticleStorageService : IArticleStorageService
             Sections = JsonSerializer.Deserialize<List<ArticleSection>>(entity.SectionsJson, JsonOptions) ?? [],
             InfoboxFacts = JsonSerializer.Deserialize<List<InfoboxFact>>(entity.InfoboxFactsJson, JsonOptions) ?? [],
             SourcePages = JsonSerializer.Deserialize<List<SourcePageInfo>>(entity.SourcePagesJson, JsonOptions) ?? [],
-            CreatedAt = entity.CreatedAt
+            CreatedAt = entity.CreatedAt,
+            CreatorDisplayName = creatorDisplayName
         };
     }
 

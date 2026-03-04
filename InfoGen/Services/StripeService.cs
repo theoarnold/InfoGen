@@ -10,6 +10,7 @@ public class StripeService : IStripeService
     private readonly string _priceId;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<StripeService> _logger;
+    private readonly HashSet<string> _complimentaryProEmails;
 
     public StripeService(IConfiguration configuration, UserManager<ApplicationUser> userManager, ILogger<StripeService> logger)
     {
@@ -19,6 +20,11 @@ public class StripeService : IStripeService
             ?? throw new InvalidOperationException("Stripe:PriceId is not configured.");
         _userManager = userManager;
         _logger = logger;
+
+        var list = configuration["Pro:ComplimentaryEmails"] ?? "";
+        _complimentaryProEmails = new HashSet<string>(
+            list.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            StringComparer.OrdinalIgnoreCase);
 
         StripeConfiguration.ApiKey = secretKey;
     }
@@ -53,6 +59,9 @@ public class StripeService : IStripeService
 
     public async Task<string> GetSubscriptionStatusAsync(ApplicationUser user)
     {
+        if (!string.IsNullOrEmpty(user.Email) && _complimentaryProEmails.Contains(user.Email))
+            return "active";
+
         if (string.IsNullOrEmpty(user.StripeCustomerId))
             return "none";
 

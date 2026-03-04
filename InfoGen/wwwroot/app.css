@@ -100,12 +100,19 @@ a.btn-save:hover {
 .generator-form-auth .auth-profile-link {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #3366cc;
+    color: #fff;
+    background: #3366cc;
     text-decoration: none;
+    padding: 0.4rem 0.8rem;
+    border: 2px solid #3366cc;
+    border-radius: 3px;
 }
 
 .generator-form-auth .auth-profile-link:hover {
-    text-decoration: underline;
+    background: #2a52a3;
+    border-color: #2a52a3;
+    color: #fff;
+    text-decoration: none;
 }
 
 .generator-form-auth .auth-login-btn {
@@ -128,10 +135,10 @@ a.btn-save:hover {
 }
 
 .generator-title {
-    margin: 0.15rem 0 0.25rem 0;
-    font-size: 1.5rem;
+    margin: 0;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: #202122;
+    color: #54595d;
     font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
 }
 
@@ -220,6 +227,189 @@ a.btn-save:hover {
     color: #a2a9b1;
     font-style: italic;
     white-space: nowrap;
+}
+
+/* Tone slider (realistic / fun / crazy) – same row layout as manual-input-row so slider ends align with text boxes */
+.tone-slider-section {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+.tone-slider-label {
+    font-weight: 600;
+    color: #54595d;
+    min-width: 1.5rem;
+    text-align: right;
+    padding-top: 0.5rem;
+}
+
+.tone-slider-wrap {
+    flex: 1;
+    min-width: 0;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+}
+
+.tone-slider-track-wrap {
+    overflow: visible;
+    padding-top: 4px;
+    padding-bottom: 28px;
+}
+
+.tone-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    display: block;
+    background: transparent;
+}
+
+.tone-slider:focus {
+    outline: none;
+}
+
+/* Track – chunky Wikipedia-style bar */
+.tone-slider::-webkit-slider-runnable-track {
+    height: 14px;
+    background: #f8f9fa;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+}
+
+.tone-slider::-moz-range-track {
+    height: 14px;
+    background: #f8f9fa;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+}
+
+/* Thumb – chunky blocky handle, same blue as site buttons */
+.tone-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 22px;
+    margin-top: -5px;
+    background: #3366cc;
+    border: 1px solid #2a52a3;
+    border-radius: 2px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.tone-slider::-moz-range-thumb {
+    width: 24px;
+    height: 22px;
+    background: #3366cc;
+    border: 1px solid #2a52a3;
+    border-radius: 2px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.tone-slider:hover::-webkit-slider-thumb {
+    background: #2a56b3;
+    border-color: #234a9e;
+}
+
+.tone-slider:hover::-moz-range-thumb {
+    background: #2a56b3;
+    border-color: #234a9e;
+}
+
+.tone-slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #72777d;
+    margin-top: -20px;
+}
+
+.tone-label.active {
+    color: #202122;
+    font-weight: 600;
+}
+
+/* Additional prompt – same row layout as manual inputs; Optional in line with title */
+.additional-prompt-row {
+    margin-top: 1rem;
+    align-items: flex-start;
+}
+
+.additional-prompt-spacer {
+    min-width: 1.5rem;
+}
+
+.additional-prompt-wrapper {
+    flex: 1;
+    min-width: 0;
+    max-width: 700px;
+}
+
+.additional-prompt-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+}
+
+.additional-prompt-label {
+    font-weight: 600;
+    color: #54595d;
+}
+
+.additional-prompt-input {
+    width: 100%;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    border: 1px solid #a2a9b1;
+    border-radius: 3px;
+    outline: none;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.additional-prompt-input:focus {
+    border-color: #3366cc;
+}
+
+.additional-prompt-count {
+    display: block;
+    font-size: 0.8rem;
+    color: #72777d;
+    margin-top: 0.25rem;
+}
+
+/* Desktop: Optional at row level so it lines up with other "Optional" labels */
+.additional-prompt-optional-desktop {
+    display: none;
+}
+
+@media (min-width: 701px) {
+    .additional-prompt-optional-desktop {
+        display: inline;
+    }
+
+    .additional-prompt-optional-mobile {
+        display: none;
+    }
+}
+
+/* Mobile: additional prompt gets more space, Optional in line with title */
+@media (max-width: 700px) {
+    .additional-prompt-wrapper {
+        max-width: 100%;
+    }
 }
 
 /* Wikipedia suggestion dropdown */
@@ -450,9 +640,14 @@ a.btn-save:hover {
     box-sizing: border-box;
 }
 
-/* Space below the article block on article page */
-.main-content:has(.wiki-article) {
-    padding-bottom: 2.5rem;
+/* Guaranteed gap below the article div when scrolled to the bottom */
+.article-page {
+    display: block;
+}
+
+.article-page-bottom-gap {
+    height: 3rem;
+    min-height: 3rem;
 }
 
 .wiki-title {
@@ -607,6 +802,20 @@ a.btn-save:hover {
 }
 
 /* === Article Actions === */
+.article-generated-by {
+    margin: 1.5rem 0 0 0;
+    font-size: 0.95rem;
+    color: #54595d;
+}
+
+.article-generated-by em {
+    font-style: italic;
+}
+
+.article-generated-by strong {
+    font-weight: 700;
+}
+
 .article-actions {
     margin-top: 2rem;
     padding-top: 1.5rem;
@@ -653,6 +862,55 @@ a.btn-save:hover {
     color: #2d8a4e;
     background: #e8f5e9;
     border-radius: 3px;
+}
+
+/* Copy link button */
+.btn-share {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.6rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #202122;
+    background: #f8f9fa;
+    border: 1px solid #a2a9b1;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-share:hover {
+    background: #eaecf0;
+    border-color: #72777d;
+}
+
+.article-actions-pair {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.article-actions-pair .btn-share {
+    padding: 0.8rem 1.25rem;
+}
+
+/* On mobile: Generate Article + Copy link side by side, Generate wider */
+@media (max-width: 700px) {
+    .article-actions-pair {
+        display: flex;
+        width: 100%;
+    }
+
+    .article-actions-pair .btn-generate-wide {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .article-actions-pair .btn-share {
+        flex-shrink: 0;
+    }
 }
 
 /* === Error Banner === */
@@ -824,19 +1082,61 @@ a.btn-save:hover {
     }
 
     .home-header {
-        margin-bottom: 0.35rem;
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+        max-height: 280px;
+        overflow: hidden;
+        opacity: 1;
+        transition: max-height 0.35s ease, opacity 0.3s ease, margin 0.35s ease;
     }
 
     .search-container {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.35rem;
+        transition: margin 0.35s ease;
+    }
+
+    .home-generate-btn {
+        max-height: 60px;
+        overflow: hidden;
+        opacity: 1;
+        margin-top: 0.5rem;
+        transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    }
+
+    /* Search active: hide logo/header, push search to top, hide generate button */
+    .home-page--search-active .home-header {
+        max-height: 0;
+        opacity: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .home-page--search-active .home-header-inner {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .home-page--search-active .search-container {
+        margin-top: 0;
+        margin-bottom: 0.25rem;
+    }
+
+    .home-page--search-active .home-generate-btn {
+        max-height: 0;
+        opacity: 0;
+        margin-top: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+        pointer-events: none;
     }
 
     .recent-articles {
-        margin-top: 0.25rem;
+        margin-top: 0.15rem;
     }
 
     .recent-articles::after {
-        background: linear-gradient(to bottom, rgba(246,246,246,0) 0%, rgba(246,246,246,0) 60%, rgba(246,246,246,1) 75%);
+        background: linear-gradient(to bottom, rgba(246,246,246,0) 0%, rgba(246,246,246,0) 82%, rgba(246,246,246,1) 100%);
     }
 
     .home-page-body {
@@ -967,22 +1267,32 @@ a.btn-save:hover {
     left: 0;
     right: 0;
     height: calc(45% + 60px + env(safe-area-inset-bottom, 0px));
-    background: linear-gradient(to bottom, rgba(246,246,246,0) 0%, rgba(246,246,246,1) 50%);
+    background: linear-gradient(to bottom, rgba(246,246,246,0) 0%, rgba(246,246,246,0) 35%, rgba(246,246,246,1) 54%);
     pointer-events: none;
     z-index: 1;
     transform: translateZ(0);
     backface-visibility: hidden;
 }
 
-@media (min-width: 768px) {
-    .recent-articles::after {
-        background: linear-gradient(to bottom, rgba(246,246,246,0) 0%, rgba(246,246,246,0) 35%, rgba(246,246,246,1) 54%);
-    }
-}
-
 .recent-articles-list {
     height: 100%;
     overflow: hidden;
+}
+
+/* Desktop: constrain home to viewport so recent-articles has fixed height and fade always shows; clip list, no scrollbar */
+@media (min-width: 768px) {
+    .page-wrapper:has(.home-page) {
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .recent-articles::after {
+        background: linear-gradient(to bottom, rgba(246,246,246,0) 0%, rgba(246,246,246,0) 35%, rgba(246,246,246,1) 54%);
+    }
+
+    .recent-articles-list {
+        overflow: hidden;
+    }
 }
 
 /* === Search Results / Article Cards === */
@@ -1093,6 +1403,72 @@ a.btn-save:hover {
     margin: -0.25rem 0 1rem 0;
     font-size: 1.1rem;
     color: #54595d;
+}
+
+.profile-username-section {
+    margin: 0.5rem 0 1.5rem 0;
+    padding: 1.25rem 1.5rem;
+    background: #f8f9fa;
+    border: 1px solid #c8ccd1;
+    border-radius: 4px;
+}
+
+.profile-username-form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.profile-username-input {
+    flex: 1;
+    min-width: 280px;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #a2a9b1;
+    border-radius: 3px;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.profile-username-form .account-external-btn.subscription-manage-btn {
+    max-width: 300px;
+}
+
+.profile-username-input:focus {
+    outline: none;
+    border-color: #3366cc;
+}
+
+@media (max-width: 700px) {
+    .profile-username-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .profile-username-input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .profile-username-form .account-external-btn.subscription-manage-btn {
+        max-width: none;
+    }
+}
+
+/* Profile page on mobile: reduce outer padding/margin so username and subscription sections have more room */
+@media (max-width: 700px) {
+    .account-page {
+        margin: 0.75rem auto;
+        padding: 1rem 1rem;
+    }
+
+    .profile-username-section,
+    .profile-subscription {
+        margin: 0.4rem 0 0.75rem 0;
+        padding: 1rem 1rem;
+    }
 }
 
 .profile-subscription {
@@ -1332,6 +1708,7 @@ a.btn-save:hover {
     flex-wrap: wrap;
     gap: 0.75rem;
     margin-top: 2rem;
+    max-width: 650px;
 }
 
 .account-page .account-external-btn {
@@ -1364,6 +1741,7 @@ a.btn-save:hover {
 }
 
 .account-page .account-external-google {
+    max-width: 650px;
     background: #3366cc;
     color: #fff;
 }

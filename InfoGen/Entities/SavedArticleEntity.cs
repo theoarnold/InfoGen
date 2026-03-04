@@ -11,4 +11,7 @@ public class SavedArticleEntity
     public string InfoboxFactsJson { get; set; } = "[]";
     public string SourcePagesJson { get; set; } = "[]";
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Identity user id of the creator (null for legacy articles).</summary>
+    public string? CreatedByUserId { get; set; }
 }

@@ -16,16 +16,22 @@
             <h1>Profile</h1>
             <p class="account-subheading">
                 Hello, @(context.User.Identity?.Name ?? "User")!
-                @if (subscriptionStatus == "active")
-                {
-                    <span class="pro-badge" title="Active subscriber">PRO</span>
-                }
             </p>
 
             @if (!string.IsNullOrEmpty(statusMessage))
             {
                 <div class="account-alert @statusClass" role="alert">@statusMessage</div>
             }
+
+            <div class="profile-username-section">
+                <h2>Username</h2>
+                <p class="subscription-info">This name appears as the author on articles you generate. Leave blank to use your email. Must be unique.</p>
+                <form method="post" action="Account/UpdateDisplayName" class="profile-username-form">
+                    <AntiforgeryToken />
+                    <input type="text" name="displayName" class="profile-username-input" placeholder="Your email (if left blank)" value="@(displayName ?? userEmail ?? "")" maxlength="256" />
+                    <button type="submit" class="account-external-btn subscription-manage-btn">Save username</button>
+                </form>
+            </div>
 
             <div class="profile-subscription">
                 <div class="subscription-header">
@@ -81,6 +87,8 @@
     private bool stripeConfigured;
     private string? statusMessage;
     private string statusClass = "success";
+    private string? displayName;
+    private string? userEmail;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -94,9 +102,12 @@
         stripeConfigured = stripeService is not null;
 
         var user = await UserManager.GetUserAsync(HttpContext.User);
-        if (user is not null && stripeService is not null)
+        if (user is not null)
         {
-            subscriptionStatus = await stripeService.GetSubscriptionStatusAsync(user);
+            userEmail = user.Email ?? user.UserName;
+            displayName = user.DisplayName ?? "";
+            if (stripeService is not null)
+                subscriptionStatus = await stripeService.GetSubscriptionStatusAsync(user);
         }
 
         if (!string.IsNullOrEmpty(Status))
@@ -106,6 +117,9 @@
                 "subscribed" => ("Successfully subscribed! You can now generate articles.", "success"),
                 "cancelled" => ("Checkout was cancelled.", "danger"),
                 "subscribe_required" => ("You need an active subscription to generate articles. Subscribe below!", "danger"),
+                "username_updated" => ("Username updated.", "success"),
+                "username_cleared" => ("Username cleared. Your email will be shown on new articles.", "success"),
+                "username_taken" => ("That username is already taken. Please choose another.", "danger"),
                 _ => (null, "success")
             };
         }

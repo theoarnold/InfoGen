@@ -18,15 +18,9 @@
     <div class="hero-section generator-panel generator-form-wrapper">
         <div class="generator-auth-bar">
             <div class="generator-form-auth">
+                <span class="generator-title">Wiki Generator</span>
                 <AuthorizeView>
                     <Authorized>
-                        <span class="auth-greeting">
-                            Hello, @(context.User.Identity?.Name ?? "User")!
-                            @if (subscriptionStatus == "active")
-                            {
-                                <span class="pro-badge" title="Active subscriber">PRO</span>
-                            }
-                        </span>
                         <a href="Account/Profile" class="auth-profile-link">Profile</a>
                     </Authorized>
                     <NotAuthorized>
@@ -36,9 +30,7 @@
                 </AuthorizeView>
             </div>
         </div>
-        <h2 class="generator-title">Wiki Generator</h2>
-        <p class="generator-hint">Paste Wikipedia article by URLs or exact name below. At least 2 URLs are required if you choose to specify articles.</p>
-        <p class="generator-hint">Leave all boxes blank to randomize</p>
+        <p class="generator-hint">Search for a wikipedia article by name or paste in the url. Leave all boxes blank to randomize.</p>
         <div class="manual-inputs">
             @for (int i = 0; i < 4; i++)
             {
@@ -48,7 +40,7 @@
                     <div class="manual-input-suggest-wrapper">
                         <input type="text"
                                class="@ManualInputClass(idx)"
-                               placeholder="e.g: https://en.wikipedia.org/wiki/Gordon_Brown or start typing to search"
+                               placeholder="e.g: Gordon Brown"
                                value="@manualUrls[idx]"
                                @oninput="@(e => OnManualUrlChanged(idx, e.Value?.ToString()))"
                                @onblur="@(() => CloseSuggestionsAfterDelay(idx))" />
@@ -83,9 +75,42 @@
             }
         </div>
 
+        <div class="tone-slider-section">
+            <span class="tone-slider-label">Tone</span>
+            <div class="tone-slider-wrap">
+                <div class="tone-slider-track-wrap">
+                    <input type="range" min="0" max="2" step="1" class="tone-slider"
+                           value="@((int)selectedTone)" @oninput="OnToneSliderInput" />
+                </div>
+                <div class="tone-slider-labels">
+                    <span class="tone-label @(selectedTone == ArticleTone.Realistic ? "active" : "")">Realistic</span>
+                    <span class="tone-label @(selectedTone == ArticleTone.Fun ? "active" : "")">Fun</span>
+                    <span class="tone-label @(selectedTone == ArticleTone.Crazy ? "active" : "")">Crazy</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="manual-input-row additional-prompt-row">
+            <span class="manual-input-label additional-prompt-spacer"></span>
+            <div class="additional-prompt-wrapper">
+                <div class="additional-prompt-title-row">
+                    <label class="additional-prompt-label" for="additional-prompt-input">Additional prompt</label>
+                    <span class="manual-input-optional additional-prompt-optional-mobile">Optional</span>
+                </div>
+                <textarea id="additional-prompt-input"
+                          class="additional-prompt-input"
+                          placeholder="Add extra guidance for subject matter or tone (max 100 words)"
+                          rows="3"
+                          @bind="additionalPrompt"
+                          @bind:event="oninput" />
+                <span class="additional-prompt-count">@AdditionalPromptWordCount / 100 words</span>
+            </div>
+            <span class="manual-input-optional additional-prompt-optional-desktop">Optional</span>
+        </div>
+
         <div class="generator-actions">
             <button class="btn-generate" @onclick="GenerateArticle" disabled="@(!CanGenerate)">
-                Generate Mashup Article
+                Generate Article
             </button>
         </div>
     </div>
@@ -232,6 +257,32 @@ else if (isLoading)
     private List<string>?[] suggestions = new List<string>?[4] { null, null, null, null };
     private bool[] suggestionsLoading = new bool[4];
     private CancellationTokenSource?[] suggestCts = new CancellationTokenSource?[4];
+
+    private ArticleTone selectedTone = ArticleTone.Fun;
+
+    private string additionalPrompt = "";
+
+    private static int CountWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+        return text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    private int AdditionalPromptWordCount => CountWords(additionalPrompt);
+
+    private static string TrimToWordLimit(string text, int maxWords)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length <= maxWords) return text.Trim();
+        return string.Join(" ", words.Take(maxWords));
+    }
+
+    private void OnToneSliderInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var i) && i >= 0 && i <= 2)
+            selectedTone = (ArticleTone)i;
+    }
 
     private string subscriptionStatus = "none";
 
@@ -428,7 +479,8 @@ else if (isLoading)
             statusMessage = "Writing an article...";
             StateHasChanged();
 
-            generatedArticle = await GeminiService.GenerateMashupArticleAsync(sourcePages);
+            var trimmedAdditional = string.IsNullOrWhiteSpace(additionalPrompt) ? null : TrimToWordLimit(additionalPrompt.Trim(), 100);
+            generatedArticle = await GeminiService.GenerateMashupArticleAsync(sourcePages, selectedTone, trimmedAdditional);
 
             currentStep = 3;
             statusMessage = "Generating an image...";
@@ -457,7 +509,15 @@ else if (isLoading)
         isSaving = true;
         try
         {
-            var result = await ArticleStorageService.SaveArticleAsync(generatedArticle, sourcePages);
+            string? userId = null;
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState?.User?.Identity?.IsAuthenticated == true)
+            {
+                var userManager = ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                var user = await userManager.FindByNameAsync(authState.User.Identity!.Name!);
+                userId = user?.Id;
+            }
+            var result = await ArticleStorageService.SaveArticleAsync(generatedArticle, sourcePages, userId);
             isSaved = true;
             savedSlug = result.Slug;
         }
@@ -481,6 +541,8 @@ else if (isLoading)
         savedSlug = null;
         manualUrls = new string[4] { "", "", "", "" };
         manualValidation = new bool?[4] { null, null, null, null };
+        selectedTone = ArticleTone.Fun;
+        additionalPrompt = "";
         StateHasChanged();
     }
 

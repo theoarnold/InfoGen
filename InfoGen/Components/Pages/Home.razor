@@ -5,7 +5,7 @@
 
 <PageTitle>Ficipedia - The fictional encyclopedia</PageTitle>
 
-<div class="home-page">
+<div class="home-page @(IsSearchActive ? "home-page--search-active" : "")">
     <header class="home-header">
         <div class="home-header-inner">
             <div class="logo-wrapper">
@@ -100,17 +100,49 @@
     public string? QueryParam { get; set; }
 
     private const int PageSize = 15;
-    private string searchQuery = "";
+    private string _searchQuery = "";
+
+    private string searchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            _searchQuery = value ?? "";
+            if (string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                searchResults = null;
+                hasMoreResults = false;
+                if (recentArticles == null)
+                {
+                    _ = InvokeAsync(async () =>
+                    {
+                        try
+                        {
+                            recentArticles = await ArticleStorageService.GetRecentArticlesAsync(10);
+                        }
+                        catch
+                        {
+                            recentArticles = new();
+                        }
+                        StateHasChanged();
+                    });
+                }
+            }
+        }
+    }
+
     private List<SavedArticleSummary>? searchResults;
     private List<SavedArticleSummary>? recentArticles;
     private bool hasMoreResults;
     private bool isLoadingMore;
 
+    private bool IsSearchActive => !string.IsNullOrWhiteSpace(_searchQuery);
+
     protected override async Task OnInitializedAsync()
     {
         if (!string.IsNullOrWhiteSpace(QueryParam))
         {
-            searchQuery = QueryParam;
+            _searchQuery = QueryParam;
             await Search();
         }
         else
@@ -128,7 +160,7 @@
 
     private async Task Search()
     {
-        if (string.IsNullOrWhiteSpace(searchQuery))
+        if (string.IsNullOrWhiteSpace(_searchQuery))
         {
             searchResults = null;
             hasMoreResults = false;
@@ -137,7 +169,7 @@
 
         try
         {
-            searchResults = await ArticleStorageService.SearchArticlesAsync(searchQuery.Trim(), 0, PageSize);
+            searchResults = await ArticleStorageService.SearchArticlesAsync(_searchQuery.Trim(), 0, PageSize);
             hasMoreResults = searchResults.Count == PageSize;
         }
         catch
@@ -155,7 +187,7 @@
         try
         {
             var moreResults = await ArticleStorageService.SearchArticlesAsync(
-                searchQuery.Trim(), searchResults.Count, PageSize);
+                _searchQuery.Trim(), searchResults.Count, PageSize);
             searchResults.AddRange(moreResults);
             hasMoreResults = moreResults.Count == PageSize;
         }

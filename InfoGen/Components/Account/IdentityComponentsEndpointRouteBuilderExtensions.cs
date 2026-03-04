@@ -40,7 +40,7 @@ namespace InfoGen.Components.Account
                     ? "/Account/Profile"
                     : returnUrl.StartsWith('/') ? returnUrl : $"/{returnUrl.TrimStart('/')}";
 
-                var result = await signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
+                var result = await signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: true);
                 if (result.Succeeded)
                 {
                     await signInManager.UpdateExternalAuthenticationTokensAsync(info);
@@ -68,7 +68,7 @@ namespace InfoGen.Components.Account
                 if (!addLoginResult.Succeeded)
                     return Results.Redirect("/Account/Login?error=Could not link external login.");
 
-                await signInManager.SignInAsync(user, isPersistent: false);
+                await signInManager.SignInAsync(user, isPersistent: true);
                 await signInManager.UpdateExternalAuthenticationTokensAsync(info);
                 return Results.LocalRedirect(localPath);
             }).AllowAnonymous();

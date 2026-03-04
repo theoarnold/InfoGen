@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using InfoGen.Components;
 using InfoGen.Data;
 using InfoGen.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using InfoGen.Components.Account;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +45,13 @@ if (!string.IsNullOrEmpty(config["Authentication:Microsoft:ClientId"]))
 }
 
 authBuilder.AddIdentityCookies();
+
+// Keep users signed in for 14 days; extend on each request (sliding)
+builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme, options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromDays(14);
+    options.SlidingExpiration = true;
+});
 
 // Database
 builder.Services.AddDbContext<InfoGenDbContext>(options =>
@@ -127,6 +136,34 @@ stripeGroup.MapPost("/create-checkout", async (
         cancelUrl: $"{baseUrl}/Account/Profile?status=cancelled");
 
     return Results.Redirect(checkoutUrl);
+});
+
+var accountGroup = app.MapGroup("/Account").RequireAuthorization();
+
+accountGroup.MapPost("/UpdateDisplayName", async (
+    HttpContext context,
+    UserManager<ApplicationUser> userManager,
+    [FromForm] string? displayName) =>
+{
+    var user = await userManager.GetUserAsync(context.User);
+    if (user is null) return Results.Redirect("/Account/Login");
+
+    var value = displayName?.Trim();
+    if (string.IsNullOrEmpty(value))
+    {
+        user.DisplayName = null;
+        await userManager.UpdateAsync(user);
+        return Results.Redirect("/Account/Profile?status=username_cleared");
+    }
+
+    var existing = await userManager.Users
+        .FirstOrDefaultAsync(u => u.Id != user.Id && u.DisplayName != null && u.DisplayName.ToLower() == value.ToLower());
+    if (existing is not null)
+        return Results.Redirect("/Account/Profile?status=username_taken");
+
+    user.DisplayName = value;
+    await userManager.UpdateAsync(user);
+    return Results.Redirect("/Account/Profile?status=username_updated");
 });
 
 stripeGroup.MapPost("/create-portal", async (
