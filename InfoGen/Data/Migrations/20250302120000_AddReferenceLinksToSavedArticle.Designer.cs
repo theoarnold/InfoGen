@@ -4,6 +4,7 @@ using InfoGen.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InfoGen.Data.Migrations
 {
     [DbContext(typeof(InfoGenDbContext))]
-    partial class InfoGenDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250302120000_AddReferenceLinksToSavedArticle")]
+    partial class AddReferenceLinksToSavedArticle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -141,6 +144,10 @@ namespace InfoGen.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ReferenceLinksJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<string>("SectionsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -149,10 +156,6 @@ namespace InfoGen.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("ReferenceLinksJson")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
 
                     b.Property<string>("SourcePagesJson")
                         .IsRequired()

@@ -5,7 +5,7 @@ namespace InfoGen.Services;
 
 public class UsageService : IUsageService
 {
-    public const int MonthlyLimit = 100;
+    public const int MonthlyLimit = 35;
 
     private readonly InfoGenDbContext _db;
 

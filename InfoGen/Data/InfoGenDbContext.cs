@@ -23,6 +23,7 @@ public class InfoGenDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.ImageDescription).HasMaxLength(1000);
             entity.Property(e => e.ImageUrl).HasMaxLength(2000);
             entity.Property(e => e.CreatedByUserId).HasMaxLength(450);
+            entity.Property(e => e.ReferenceLinksJson).HasMaxLength(4000);
         });
         modelBuilder.Entity<ApplicationUser>(entity =>
         {

@@ -30,9 +30,9 @@ public class GeminiService : IGeminiService
     /// Uses Gemini to generate a fake Wikipedia article from 4 source pages.
     /// Returns structured JSON via Gemini's responseSchema feature.
     /// </summary>
-    public async Task<GeneratedArticle> GenerateMashupArticleAsync(List<WikipediaPage> pages, ArticleTone tone = ArticleTone.Fun, string? additionalPrompt = null)
+    public async Task<GeneratedArticle> GenerateMashupArticleAsync(List<WikipediaPage> pages, ArticleTone tone = ArticleTone.Fun, string? additionalPrompt = null, List<ReferenceLink>? referenceLinks = null)
     {
-        var prompt = BuildMashupPrompt(pages, tone, additionalPrompt);
+        var prompt = BuildMashupPrompt(pages, tone, additionalPrompt, referenceLinks);
 
         _logger.LogInformation("Sending mashup prompt to Gemini ({Model}) with JSON schema...", _textModel);
 
@@ -201,7 +201,7 @@ public class GeminiService : IGeminiService
         return null;
     }
 
-    private static string BuildMashupPrompt(List<WikipediaPage> pages, ArticleTone tone, string? additionalPrompt)
+    private static string BuildMashupPrompt(List<WikipediaPage> pages, ArticleTone tone, string? additionalPrompt, List<ReferenceLink>? referenceLinks)
     {
         var template = LoadMashupPromptTemplate();
         var sources = new StringBuilder();
@@ -217,8 +217,17 @@ public class GeminiService : IGeminiService
             ArticleTone.Crazy => "The article can be absurd, funny, and over-the-top—prioritize humor and surprise while still following Wikipedia structure.",
             _ => "The article should be fun and entertaining, with a balance of realism and creative flair—engaging and encyclopedic."
         };
+
+        var referencesBlock = "";
+        if (referenceLinks is { Count: > 0 })
+        {
+            var refList = string.Join("\n", referenceLinks.Select(r => $"- \"{r.Title}\""));
+            referencesBlock = "The following Ficipedia articles already exist. Where it fits naturally in the body text, reference them using exactly [[Article Title]] (use the exact title in quotes as shown below). Each [[Title]] will become a blue internal link. Only reference where relevant; do not force them in.\n\nExisting articles:\n" + refList + "\n\n";
+        }
+
         var prompt = template
             .Replace("{{TONE}}", toneInstruction)
+            .Replace("{{REFERENCES}}", referencesBlock)
             .Replace("{{SOURCES}}", sources.ToString().TrimEnd());
 
         if (!string.IsNullOrWhiteSpace(additionalPrompt))

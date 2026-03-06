@@ -77,7 +77,7 @@ else
                     }
                     @foreach (var paragraph in articleSection.Paragraphs)
                     {
-                        <p>@paragraph</p>
+                        <p>@((MarkupString)ReferenceLinkRenderer.ToHtml(paragraph, article.ReferenceLinks))</p>
                     }
                 }
             </div>

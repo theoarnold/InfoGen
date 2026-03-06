@@ -14,4 +14,7 @@ public class SavedArticleEntity
 
     /// <summary>Identity user id of the creator (null for legacy articles).</summary>
     public string? CreatedByUserId { get; set; }
+
+    /// <summary>JSON array of { "title": "...", "slug": "..." } for internal links [[Title]] in body.</summary>
+    public string? ReferenceLinksJson { get; set; }
 }

@@ -24,7 +24,7 @@ public partial class ArticleStorageService : IArticleStorageService
         _logger = logger;
     }
 
-    public async Task<SavedArticleSummary> SaveArticleAsync(GeneratedArticle article, List<WikipediaPage> sourcePages, string? createdByUserId = null)
+    public async Task<SavedArticleSummary> SaveArticleAsync(GeneratedArticle article, List<WikipediaPage> sourcePages, string? createdByUserId = null, List<ReferenceLink>? referenceLinks = null)
     {
         string? imageUrl = null;
         if (!string.IsNullOrEmpty(article.ImageDataUrl))
@@ -51,7 +51,10 @@ public partial class ArticleStorageService : IArticleStorageService
                 p.Extract
             })),
             CreatedAt = DateTime.UtcNow,
-            CreatedByUserId = createdByUserId
+            CreatedByUserId = createdByUserId,
+            ReferenceLinksJson = referenceLinks is { Count: > 0 }
+                ? JsonSerializer.Serialize(referenceLinks.Select(r => new { r.Title, r.Slug }))
+                : null
         };
 
         _dbContext.SavedArticles.Add(entity);
@@ -112,7 +115,10 @@ public partial class ArticleStorageService : IArticleStorageService
             InfoboxFacts = JsonSerializer.Deserialize<List<InfoboxFact>>(entity.InfoboxFactsJson, JsonOptions) ?? [],
             SourcePages = JsonSerializer.Deserialize<List<SourcePageInfo>>(entity.SourcePagesJson, JsonOptions) ?? [],
             CreatedAt = entity.CreatedAt,
-            CreatorDisplayName = creatorDisplayName
+            CreatorDisplayName = creatorDisplayName,
+            ReferenceLinks = string.IsNullOrEmpty(entity.ReferenceLinksJson)
+                ? new List<ReferenceLink>()
+                : JsonSerializer.Deserialize<List<ReferenceLink>>(entity.ReferenceLinksJson, JsonOptions) ?? new List<ReferenceLink>()
         };
     }
 

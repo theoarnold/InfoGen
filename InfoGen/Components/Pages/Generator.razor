@@ -9,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IServiceProvider ServiceProvider
+@inject ILogger<Generator> Logger
 @rendermode InteractiveServer
 
 <PageTitle>@(generatedArticle != null ? $"{generatedArticle.Title} - Ficipedia" : "Generate Article - Ficipedia")</PageTitle>
@@ -18,7 +19,8 @@
     <div class="hero-section generator-panel generator-form-wrapper">
         <div class="generator-auth-bar">
             <div class="generator-form-auth">
-                <span class="generator-title">Wiki Generator</span>
+                <span class="generator-status-dot" aria-hidden="true"></span>
+                <span class="generator-title">AI Wiki Generator - Beta</span>
                 <AuthorizeView>
                     <Authorized>
                         <a href="Account/Profile" class="auth-profile-link">Profile</a>
@@ -30,88 +32,280 @@
                 </AuthorizeView>
             </div>
         </div>
-        <p class="generator-hint">Search for a wikipedia article by name or paste in the url. Leave all boxes blank to randomize.</p>
+        <p class="generator-hint-bold">@(showRestOfForm ? "Want to add more?" : (showSecondBox ? "Add another..." : "Enter your first source article..."))</p>
         <div class="manual-inputs">
-            @for (int i = 0; i < 4; i++)
-            {
-                var idx = i;
+            @* Row 0: always visible *@
+            @{ var idx0 = 0; }
+            <div class="manual-input-row">
+                <span class="manual-input-label">1.</span>
+                <div class="manual-input-suggest-wrapper search-input-wrapper">
+                    <input type="text"
+                           class="@ManualInputClass(idx0)"
+                           placeholder="Search Wikipedia..."
+                           value="@manualUrls[idx0]"
+                           @oninput="@(e => OnManualUrlChanged(idx0, e.Value?.ToString()))"
+                           @onblur="@OnFirstInputBlur" />
+                    <span class="search-input-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    </span>
+                    @if (suggestionsLoading[idx0])
+                    {
+                        <span class="suggest-loading">Searching...</span>
+                    }
+                    @if (suggestions[idx0] != null && suggestions[idx0]!.Count > 0)
+                    {
+                        <ul class="suggest-dropdown" role="listbox">
+                            @foreach (var title in suggestions[idx0]!)
+                            {
+                                <li role="option" class="suggest-item"
+                                    @onmousedown:preventDefault
+                                    @onclick="@(() => SelectSuggestion(idx0, title))">@title</li>
+                            }
+                        </ul>
+                    }
+                </div>
+                @if (manualValidation[idx0] == false)
+                {
+                    <span class="manual-input-error">Not a valid Wikipedia article</span>
+                }
+            </div>
+            @{
+                var showRandomizeRow = (!FirstFilled && !randomizeRowHiddenAfterFirstEntry) || randomizeFading || wrapperCollapsing;
+                var randomizeWrapperExpanded = (!FirstFilled && !randomizeRowHiddenAfterFirstEntry) || randomizeFading;
+            }
+            <div class="randomize-row-wrapper @(randomizeWrapperExpanded ? "randomize-row-wrapper--expanded" : "") @(wrapperCollapsing ? "randomize-row-wrapper--collapsing" : "")">
+                @if (showRandomizeRow)
+                {
+                    <div class="randomize-row @(randomizeFading ? "randomize-row-fade-out" : "") @(wrapperCollapsing ? "randomize-row-invisible" : "")">
+                        <span class="randomize-label">Or just…</span>
+                        <button type="button" class="btn-randomize" @onclick="GenerateArticle">Randomize</button>
+                    </div>
+                }
+            </div>
+            @* Row 1: revealed after user leaves first box with content; wrapper fades in *@
+            <div class="second-box-wrapper @(showSecondBox ? "visible" : "")">
+                @{ var idx1 = 1; }
                 <div class="manual-input-row">
-                    <span class="manual-input-label">@(idx + 1).</span>
-                    <div class="manual-input-suggest-wrapper">
+                    <span class="manual-input-label">2.</span>
+                    <div class="manual-input-suggest-wrapper search-input-wrapper">
                         <input type="text"
-                               class="@ManualInputClass(idx)"
+                               class="@ManualInputClass(idx1)"
                                placeholder="e.g: Gordon Brown"
-                               value="@manualUrls[idx]"
-                               @oninput="@(e => OnManualUrlChanged(idx, e.Value?.ToString()))"
-                               @onblur="@(() => CloseSuggestionsAfterDelay(idx))" />
-                        @if (suggestionsLoading[idx])
+                               value="@manualUrls[idx1]"
+                               @oninput="@(e => OnManualUrlChanged(idx1, e.Value?.ToString()))"
+                               @onblur="@OnSecondInputBlur" />
+                        <span class="search-input-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        </span>
+                        @if (suggestionsLoading[idx1])
                         {
                             <span class="suggest-loading">Searching...</span>
                         }
-                        @if (suggestions[idx] != null && suggestions[idx]!.Count > 0)
+                        @if (suggestions[idx1] != null && suggestions[idx1]!.Count > 0)
                         {
                             <ul class="suggest-dropdown" role="listbox">
-                                @foreach (var title in suggestions[idx]!)
+                                @foreach (var title in suggestions[idx1]!)
                                 {
-                                    <li role="option"
-                                        class="suggest-item"
+                                    <li role="option" class="suggest-item"
                                         @onmousedown:preventDefault
-                                        @onclick="@(() => SelectSuggestion(idx, title))">
-                                        @title
+                                        @onclick="@(() => SelectSuggestion(idx1, title))">@title</li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                    @if (manualValidation[idx1] == false)
+                    {
+                        <span class="manual-input-error">Not a valid Wikipedia article</span>
+                    }
+                </div>
+            </div>
+            @* Boxes 3 & 4 + tone, advanced, actions: reveal only after user commits second box (blur or select) *@
+            @if (showRestOfForm)
+            {
+                var idx2 = 2;
+                <div class="form-reveal-item">
+                    <div class="manual-input-row">
+                        <span class="manual-input-label">3.</span>
+                        <div class="manual-input-suggest-wrapper search-input-wrapper">
+                            <input type="text"
+                                   class="@ManualInputClass(idx2)"
+                                   placeholder="e.g: Gordon Brown"
+                                   value="@manualUrls[idx2]"
+                                   @oninput="@(e => OnManualUrlChanged(idx2, e.Value?.ToString()))"
+                                   @onblur="@(() => CloseSuggestionsAfterDelay(idx2))" />
+                            <span class="search-input-icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            </span>
+                            @if (suggestionsLoading[idx2])
+                            {
+                                <span class="suggest-loading">Searching...</span>
+                            }
+                            @if (suggestions[idx2] != null && suggestions[idx2]!.Count > 0)
+                            {
+                                <ul class="suggest-dropdown" role="listbox">
+                                    @foreach (var title in suggestions[idx2]!)
+                                    {
+                                        <li role="option" class="suggest-item"
+                                            @onmousedown:preventDefault
+                                            @onclick="@(() => SelectSuggestion(idx2, title))">@title</li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                        @if (manualValidation[idx2] == false)
+                        {
+                            <span class="manual-input-error">Not a valid Wikipedia article</span>
+                        }
+                        <span class="manual-input-optional">Optional</span>
+                    </div>
+                </div>
+                var idx3 = 3;
+                <div class="form-reveal-item">
+                    <div class="manual-input-row">
+                        <span class="manual-input-label">4.</span>
+                        <div class="manual-input-suggest-wrapper search-input-wrapper">
+                            <input type="text"
+                                   class="@ManualInputClass(idx3)"
+                                   placeholder="e.g: Gordon Brown"
+                                   value="@manualUrls[idx3]"
+                                   @oninput="@(e => OnManualUrlChanged(idx3, e.Value?.ToString()))"
+                                   @onblur="@(() => CloseSuggestionsAfterDelay(idx3))" />
+                            <span class="search-input-icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            </span>
+                            @if (suggestionsLoading[idx3])
+                            {
+                                <span class="suggest-loading">Searching...</span>
+                            }
+                            @if (suggestions[idx3] != null && suggestions[idx3]!.Count > 0)
+                            {
+                                <ul class="suggest-dropdown" role="listbox">
+                                    @foreach (var title in suggestions[idx3]!)
+                                    {
+                                        <li role="option" class="suggest-item"
+                                            @onmousedown:preventDefault
+                                            @onclick="@(() => SelectSuggestion(idx3, title))">@title</li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                        @if (manualValidation[idx3] == false)
+                        {
+                            <span class="manual-input-error">Not a valid Wikipedia article</span>
+                        }
+                        <span class="manual-input-optional">Optional</span>
+                    </div>
+                </div>
+                <div class="form-reveal-item">
+                    <div class="tone-slider-section">
+                        <span class="tone-slider-label">Tone</span>
+                        <div class="tone-slider-wrap">
+                            <div class="tone-slider-track-wrap">
+                                <input type="range" min="0" max="2" step="1" class="tone-slider"
+                                       value="@((int)selectedTone)" @oninput="OnToneSliderInput" />
+                            </div>
+                            <div class="tone-slider-labels">
+                                <span class="tone-label @(selectedTone == ArticleTone.Realistic ? "active" : "")">Realistic</span>
+                                <span class="tone-label @(selectedTone == ArticleTone.Fun ? "active" : "")">Fun</span>
+                                <span class="tone-label @(selectedTone == ArticleTone.Crazy ? "active" : "")">Crazy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-reveal-item">
+                    <div class="advanced-section">
+            <button type="button" class="advanced-section-header @(moreSectionExpanded ? "expanded" : "")"
+                    @onclick="ToggleMoreSection"
+                    aria-expanded="@moreSectionExpanded"
+                    aria-controls="advanced-section-content">
+                <span class="advanced-section-label">Advanced</span>
+                <span class="advanced-section-chevron" aria-hidden="true">▼</span>
+            </button>
+            <div id="advanced-section-content" class="advanced-section-content @(moreSectionExpanded ? "expanded" : "collapsed")">
+                <div class="advanced-section-content-inner">
+                <div class="manual-input-row reference-section-row">
+                    <span class="manual-input-label additional-prompt-spacer"></span>
+                    <div class="reference-section reference-section-content">
+                        <div class="additional-prompt-title-row reference-section-title-row">
+                            <label class="reference-section-label">Add Reference</label>
+                            <span class="manual-input-optional additional-prompt-optional-mobile">Optional</span>
+                        </div>
+                        <p class="reference-section-hint">Link to up to 5 existing Ficipedia articles so the AI can reference them in the body (they become blue links).</p>
+                        <div class="reference-search-wrap search-input-wrapper">
+                            <input type="text"
+                                   class="reference-search-input"
+                                   placeholder="Search saved articles..."
+                                   value="@referenceSearchQuery"
+                                   @oninput="OnReferenceSearchInput"
+                                   @onblur="CloseReferenceSuggestAfterDelay" />
+                            <span class="search-input-icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            </span>
+                            @if (referenceSearchLoading)
+                            {
+                                <span class="suggest-loading">Searching...</span>
+                            }
+                            @if (referenceSearchResults != null && referenceSearchResults.Count > 0)
+                            {
+                                <ul class="suggest-dropdown reference-suggest-dropdown" role="listbox">
+                                    @foreach (var hit in referenceSearchResults)
+                                    {
+                                        var article = hit;
+                                        <li role="option" class="suggest-item"
+                                            @onmousedown:preventDefault
+                                            @onclick="@(() => AddReference(article))">
+                                            @article.Title
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                        @if (selectedReferences.Count > 0)
+                        {
+                            <ul class="reference-chips">
+                                @foreach (var refLink in selectedReferences)
+                                {
+                                    var r = refLink;
+                                    <li>
+                                        <a href="/wiki/@r.Slug" class="reference-chip-title">@r.Title</a>
+                                        <button type="button" class="reference-chip-remove" @onclick="@(() => RemoveReference(r))" aria-label="Remove">×</button>
                                     </li>
                                 }
                             </ul>
                         }
                     </div>
-                    @if (manualValidation[idx] == false)
-                    {
-                        <span class="manual-input-error">Not a valid Wikipedia article</span>
-                    }
-                    @if (idx >= 2)
-                    {
-                        <span class="manual-input-optional">Optional</span>
-                    }
+                    <span class="manual-input-optional additional-prompt-optional-desktop">Optional</span>
                 </div>
-            }
-        </div>
 
-        <div class="tone-slider-section">
-            <span class="tone-slider-label">Tone</span>
-            <div class="tone-slider-wrap">
-                <div class="tone-slider-track-wrap">
-                    <input type="range" min="0" max="2" step="1" class="tone-slider"
-                           value="@((int)selectedTone)" @oninput="OnToneSliderInput" />
+                <div class="manual-input-row additional-prompt-row">
+                    <span class="manual-input-label additional-prompt-spacer"></span>
+                    <div class="additional-prompt-wrapper">
+                        <div class="additional-prompt-title-row">
+                            <label class="additional-prompt-label" for="additional-prompt-input">Additional prompt</label>
+                            <span class="manual-input-optional additional-prompt-optional-mobile">Optional</span>
+                        </div>
+                        <textarea id="additional-prompt-input"
+                                  class="additional-prompt-input"
+                                  placeholder="Add extra guidance for subject matter or tone (max 100 words)"
+                                  rows="3"
+                                  @bind="additionalPrompt"
+                                  @bind:event="oninput" />
+                        <span class="additional-prompt-count">@AdditionalPromptWordCount / 100 words</span>
+                    </div>
+                    <span class="manual-input-optional additional-prompt-optional-desktop">Optional</span>
                 </div>
-                <div class="tone-slider-labels">
-                    <span class="tone-label @(selectedTone == ArticleTone.Realistic ? "active" : "")">Realistic</span>
-                    <span class="tone-label @(selectedTone == ArticleTone.Fun ? "active" : "")">Fun</span>
-                    <span class="tone-label @(selectedTone == ArticleTone.Crazy ? "active" : "")">Crazy</span>
                 </div>
             </div>
-        </div>
-
-        <div class="manual-input-row additional-prompt-row">
-            <span class="manual-input-label additional-prompt-spacer"></span>
-            <div class="additional-prompt-wrapper">
-                <div class="additional-prompt-title-row">
-                    <label class="additional-prompt-label" for="additional-prompt-input">Additional prompt</label>
-                    <span class="manual-input-optional additional-prompt-optional-mobile">Optional</span>
+                    </div>
                 </div>
-                <textarea id="additional-prompt-input"
-                          class="additional-prompt-input"
-                          placeholder="Add extra guidance for subject matter or tone (max 100 words)"
-                          rows="3"
-                          @bind="additionalPrompt"
-                          @bind:event="oninput" />
-                <span class="additional-prompt-count">@AdditionalPromptWordCount / 100 words</span>
-            </div>
-            <span class="manual-input-optional additional-prompt-optional-desktop">Optional</span>
-        </div>
-
-        <div class="generator-actions">
-            <button class="btn-generate" @onclick="GenerateArticle" disabled="@(!CanGenerate)">
-                Generate Article
-            </button>
+                <div class="form-reveal-item">
+                    <div class="generator-actions">
+                        <button class="btn-generate" @onclick="GenerateArticle" disabled="@(!CanGenerate)">
+                            Generate Article
+                        </button>
+                    </div>
+                </div>
+        }
         </div>
     </div>
 }
@@ -182,7 +376,7 @@ else if (isLoading)
                     }
                     @foreach (var paragraph in articleSection.Paragraphs)
                     {
-                        <p>@paragraph</p>
+                        <p>@((MarkupString)ReferenceLinkRenderer.ToHtml(paragraph, selectedReferences))</p>
                     }
                 }
             </div>
@@ -262,6 +456,32 @@ else if (isLoading)
 
     private string additionalPrompt = "";
 
+    private bool moreSectionExpanded;
+
+    private string referenceSearchQuery = "";
+    private List<SavedArticleSummary>? referenceSearchResults;
+    private bool referenceSearchLoading;
+    private CancellationTokenSource? referenceSearchCts;
+    private List<ReferenceLink> selectedReferences = new();
+
+    private const int MaxReferences = 5;
+
+    private bool FirstFilled => !string.IsNullOrWhiteSpace(manualUrls[0]);
+    private bool SecondFilled => !string.IsNullOrWhiteSpace(manualUrls[1]);
+
+    private bool showSecondBox;
+    private bool showRestOfForm;
+    private bool randomizeFading;
+    private bool randomizeRowHiddenAfterFirstEntry;
+    private bool wrapperCollapsing;
+
+    private void OnFirstInputBlur()
+    {
+        CloseSuggestionsAfterDelay(0);
+        if (FirstFilled)
+            showSecondBox = true;
+    }
+
     private static int CountWords(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0;
@@ -282,6 +502,71 @@ else if (isLoading)
     {
         if (int.TryParse(e.Value?.ToString(), out var i) && i >= 0 && i <= 2)
             selectedTone = (ArticleTone)i;
+    }
+
+    private void ToggleMoreSection()
+    {
+        moreSectionExpanded = !moreSectionExpanded;
+        StateHasChanged();
+    }
+
+    private void OnReferenceSearchInput(ChangeEventArgs e)
+    {
+        referenceSearchQuery = e.Value?.ToString() ?? "";
+        referenceSearchResults = null;
+        referenceSearchCts?.Cancel();
+        referenceSearchCts?.Dispose();
+        referenceSearchCts = new CancellationTokenSource();
+        var cts = referenceSearchCts;
+        _ = RunReferenceSearchAsync(referenceSearchQuery, cts.Token);
+    }
+
+    private async Task RunReferenceSearchAsync(string query, CancellationToken cancel)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+        {
+            referenceSearchResults = new List<SavedArticleSummary>();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+        referenceSearchLoading = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var results = await ArticleStorageService.SearchArticlesAsync(query.Trim(), 0, 10);
+            if (!cancel.IsCancellationRequested)
+                referenceSearchResults = results;
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            referenceSearchLoading = false;
+            if (!cancel.IsCancellationRequested)
+                await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CloseReferenceSuggestAfterDelay()
+    {
+        await Task.Delay(200);
+        referenceSearchResults = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void AddReference(SavedArticleSummary article)
+    {
+        if (selectedReferences.Count >= MaxReferences) return;
+        if (selectedReferences.Any(r => r.Slug == article.Slug)) return;
+        selectedReferences.Add(new ReferenceLink { Title = article.Title, Slug = article.Slug });
+        referenceSearchQuery = "";
+        referenceSearchResults = null;
+        StateHasChanged();
+    }
+
+    private void RemoveReference(ReferenceLink r)
+    {
+        selectedReferences.RemoveAll(x => x.Slug == r.Slug);
+        StateHasChanged();
     }
 
     private string subscriptionStatus = "none";
@@ -317,9 +602,31 @@ else if (isLoading)
         }
     }
 
+    private async void OnSecondInputBlur()
+    {
+        await CloseSuggestionsAfterDelay(1);
+        if (SecondFilled)
+        {
+            showRestOfForm = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private void OnManualUrlChanged(int index, string? value)
     {
         manualUrls[index] = value ?? "";
+        if (index == 0)
+        {
+            if (!string.IsNullOrWhiteSpace(manualUrls[0]))
+            {
+                if (!randomizeRowHiddenAfterFirstEntry)
+                    StartRandomizeFadeOut();
+            }
+            else
+                randomizeRowHiddenAfterFirstEntry = false;
+        }
+        if (index == 1 && string.IsNullOrWhiteSpace(manualUrls[1]))
+            showRestOfForm = false;
         manualValidation[index] = null;
 
         suggestCts[index]?.Cancel();
@@ -364,7 +671,29 @@ else if (isLoading)
         manualUrls[index] = title;
         manualValidation[index] = null;
         suggestions[index] = null;
+        if (index == 0 && !string.IsNullOrWhiteSpace(title))
+        {
+            showSecondBox = true;
+            if (!randomizeRowHiddenAfterFirstEntry)
+                StartRandomizeFadeOut();
+        }
+        if (index == 1 && !string.IsNullOrWhiteSpace(title))
+            showRestOfForm = true;
         StateHasChanged();
+    }
+
+    private async void StartRandomizeFadeOut()
+    {
+        randomizeRowHiddenAfterFirstEntry = true;
+        randomizeFading = true;
+        StateHasChanged();
+        await Task.Delay(300);
+        randomizeFading = false;
+        wrapperCollapsing = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(300);
+        wrapperCollapsing = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task CloseSuggestionsAfterDelay(int index)
@@ -480,7 +809,8 @@ else if (isLoading)
             StateHasChanged();
 
             var trimmedAdditional = string.IsNullOrWhiteSpace(additionalPrompt) ? null : TrimToWordLimit(additionalPrompt.Trim(), 100);
-            generatedArticle = await GeminiService.GenerateMashupArticleAsync(sourcePages, selectedTone, trimmedAdditional);
+            var refs = selectedReferences.Count > 0 ? selectedReferences : null;
+            generatedArticle = await GeminiService.GenerateMashupArticleAsync(sourcePages, selectedTone, trimmedAdditional, refs);
 
             currentStep = 3;
             statusMessage = "Generating an image...";
@@ -493,7 +823,8 @@ else if (isLoading)
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            Logger.LogError(ex, "Article generation failed");
+            errorMessage = "Something went wrong while generating. Please try again.";
         }
         finally
         {
@@ -517,13 +848,15 @@ else if (isLoading)
                 var user = await userManager.FindByNameAsync(authState.User.Identity!.Name!);
                 userId = user?.Id;
             }
-            var result = await ArticleStorageService.SaveArticleAsync(generatedArticle, sourcePages, userId);
+            var refs = selectedReferences.Count > 0 ? selectedReferences : null;
+            var result = await ArticleStorageService.SaveArticleAsync(generatedArticle, sourcePages, userId, refs);
             isSaved = true;
             savedSlug = result.Slug;
         }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to save: {ex.Message}";
+            Logger.LogError(ex, "Save article failed");
+            errorMessage = "Failed to save the article. Please try again.";
         }
         finally
         {
@@ -541,8 +874,14 @@ else if (isLoading)
         savedSlug = null;
         manualUrls = new string[4] { "", "", "", "" };
         manualValidation = new bool?[4] { null, null, null, null };
+        showSecondBox = false;
+        showRestOfForm = false;
+        randomizeRowHiddenAfterFirstEntry = false;
+        randomizeFading = false;
+        wrapperCollapsing = false;
         selectedTone = ArticleTone.Fun;
         additionalPrompt = "";
+        selectedReferences = new List<ReferenceLink>();
         StateHasChanged();
     }
 

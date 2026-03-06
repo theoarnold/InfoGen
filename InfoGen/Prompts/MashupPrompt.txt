@@ -29,6 +29,8 @@ Make up believable fictional details. Each label and value should be short (a fe
 
 Respond with valid JSON matching the schema provided. Each section's "content" field should contain the full paragraph(s) for that section (use \n\n to separate multiple paragraphs within a section).
 
+{{REFERENCES}}
+
 Here are the 4 Wikipedia article introductions to mashup:
 
 {{SOURCES}}

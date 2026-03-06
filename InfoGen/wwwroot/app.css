@@ -80,12 +80,13 @@ a.btn-save:hover {
     border-bottom: 1px solid #a2a9b1;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
+    position: relative;
 }
 
 .generator-form-auth {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     width: 100%;
     min-height: 2.25rem;
     white-space: nowrap;
@@ -134,10 +135,29 @@ a.btn-save:hover {
     text-decoration: none;
 }
 
+.generator-status-dot {
+    position: absolute;
+    top: 0.72rem;
+    left: 0.75rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #00aa00;
+    animation: generator-status-dot-flash 1.2s ease-in-out infinite;
+}
+
+@keyframes generator-status-dot-flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+}
+
 .generator-title {
+    position: absolute;
+    top: 0.5rem;
+    left: 1.5rem;
     margin: 0;
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 0.89rem;
+    font-weight: 400;
     color: #54595d;
     font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
 }
@@ -147,6 +167,60 @@ a.btn-save:hover {
     font-size: 14px;
     color: #72777d;
     line-height: 1.5;
+}
+
+.generator-hint-bold {
+    margin: 0.15rem 0 0.75rem 0;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: #72777d;
+    font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
+    transform-origin: left center;
+    animation: generator-hint-pulsate 3s ease-in-out infinite;
+}
+
+@keyframes generator-hint-pulsate {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.015); }
+}
+
+/* Second box: reveal only after blur; fade in gracefully */
+.second-box-wrapper {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out, max-height 0.5s ease-out;
+}
+
+.second-box-wrapper.visible {
+    opacity: 1;
+    max-height: 80px;
+    overflow: visible;
+    transform: translateY(0);
+}
+
+/* Form reveal items (boxes 3–4, tone, advanced, actions) – same gap as boxes 1–2 via .manual-inputs */
+.manual-inputs .form-reveal-item {
+    opacity: 0;
+    animation: form-reveal-in 0.35s ease-out forwards;
+}
+
+.manual-inputs .form-reveal-item:nth-child(3) { animation-delay: 0s; }
+.manual-inputs .form-reveal-item:nth-child(4) { animation-delay: 0.08s; }
+.manual-inputs .form-reveal-item:nth-child(5) { animation-delay: 0.16s; }
+.manual-inputs .form-reveal-item:nth-child(6) { animation-delay: 0.24s; }
+.manual-inputs .form-reveal-item:nth-child(7) { animation-delay: 0.32s; }
+
+@keyframes form-reveal-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .mode-toggle {
@@ -281,26 +355,26 @@ a.btn-save:hover {
     height: 14px;
     background: #f8f9fa;
     border: 1px solid #a2a9b1;
-    border-radius: 2px;
+    border-radius: 7px;
 }
 
 .tone-slider::-moz-range-track {
     height: 14px;
     background: #f8f9fa;
     border: 1px solid #a2a9b1;
-    border-radius: 2px;
+    border-radius: 7px;
 }
 
-/* Thumb – chunky blocky handle, same blue as site buttons */
+/* Thumb – chunky rounded handle, same blue as site buttons */
 .tone-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 24px;
     height: 22px;
     margin-top: -5px;
-    background: #3366cc;
-    border: 1px solid #2a52a3;
-    border-radius: 2px;
+    background: #2563eb;
+    border: 1px solid #1d4ed8;
+    border-radius: 8px;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -308,9 +382,9 @@ a.btn-save:hover {
 .tone-slider::-moz-range-thumb {
     width: 24px;
     height: 22px;
-    background: #3366cc;
-    border: 1px solid #2a52a3;
-    border-radius: 2px;
+    background: #2563eb;
+    border: 1px solid #1d4ed8;
+    border-radius: 8px;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -333,9 +407,227 @@ a.btn-save:hover {
     margin-top: -20px;
 }
 
+.tone-label {
+    display: inline-block;
+    transform-origin: center;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.tone-label:hover {
+    transform: scale(1.08);
+}
+
 .tone-label.active {
     color: #202122;
     font-weight: 600;
+    transform: scale(1.18);
+}
+
+.tone-label.active:hover {
+    transform: scale(1.22);
+}
+
+/* Advanced – collapsible section for Add Reference and Additional prompt */
+.advanced-section {
+    margin-top: 1rem;
+    width: fit-content;
+    max-width: 730px;
+    background: #f8f9fa;
+    border: 1px solid #c8ccd1;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.advanced-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.6rem 0.9rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #54595d;
+    background: #f8f9fa;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+}
+
+.advanced-section-header:hover {
+    background: #e9ecef;
+}
+
+.advanced-section-label {
+    flex: 1;
+}
+
+.advanced-section-chevron {
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+}
+
+.advanced-section-header.expanded .advanced-section-chevron {
+    transform: rotate(180deg);
+}
+
+.advanced-section-content {
+    overflow: hidden;
+    transition: max-height 0.25s ease-out;
+}
+
+.advanced-section-content.collapsed {
+    max-height: 0;
+}
+
+.advanced-section-content.expanded {
+    max-height: 1200px;
+}
+
+.advanced-section-content-inner {
+    padding: 0.5rem 0.5rem 0.75rem 0.5rem;
+}
+
+@media (max-width: 700px) {
+    .advanced-section-content-inner {
+        padding-left: 0;
+    }
+}
+
+/* Add Reference section – same row layout as additional prompt so content aligns */
+.reference-section-row {
+    margin-top: 1rem;
+    align-items: flex-start;
+}
+
+.reference-section-content {
+    flex: 1;
+    min-width: 0;
+    max-width: 700px;
+}
+
+.reference-section-label {
+    font-weight: 600;
+    color: #54595d;
+}
+
+.reference-section-hint {
+    font-size: 0.9rem;
+    color: #72777d;
+    margin: 0 0 0.5rem 0;
+}
+
+/* Search icon on the right of search inputs (4 article boxes + Add Reference) */
+.search-input-wrapper {
+    position: relative;
+}
+
+.search-input-wrapper .search-input-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #72777d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-input-wrapper .manual-input,
+.search-input-wrapper .reference-search-input {
+    padding-right: 2.25rem;
+}
+
+.search-input-wrapper .suggest-loading {
+    right: 2.25rem;
+}
+
+.reference-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.reference-search-input {
+    width: 100%;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.95rem;
+    border: 1px solid #a2a9b1;
+    border-radius: 3px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.reference-search-input:focus {
+    border-color: #3366cc;
+}
+
+.reference-suggest-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #a2a9b1;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.reference-search-wrap .suggest-loading {
+    top: 50%;
+}
+
+.reference-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0.5rem 0 0 0;
+    padding: 0;
+}
+
+.reference-chips li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.4rem 0.2rem 0.5rem;
+    background: #e7f1ff;
+    border: 1px solid #a7d7f9;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.reference-chip-title {
+    color: #0645ad;
+    text-decoration: none;
+}
+
+.reference-chip-title:hover {
+    text-decoration: underline;
+}
+
+.reference-chip-remove {
+    padding: 0 0.25rem;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: #72777d;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+.reference-chip-remove:hover {
+    color: #202122;
+    background: #c8ccd1;
 }
 
 /* Additional prompt – same row layout as manual inputs; Optional in line with title */
@@ -405,9 +697,10 @@ a.btn-save:hover {
     }
 }
 
-/* Mobile: additional prompt gets more space, Optional in line with title */
+/* Mobile: additional prompt and reference section get full width */
 @media (max-width: 700px) {
-    .additional-prompt-wrapper {
+    .additional-prompt-wrapper,
+    .reference-section-content {
         max-width: 100%;
     }
 }
@@ -533,6 +826,72 @@ a.btn-save:hover {
 .btn-generate.btn-small {
     padding: 0.4rem 1rem;
     font-size: 0.9rem;
+}
+
+.randomize-row-wrapper {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding-bottom 0.3s ease-out, margin-bottom 0.3s ease-out;
+    max-height: 0;
+    /* When collapsed (no content), cancel the flex gap below so box 1 and box 2 don't get double gap */
+    margin-bottom: -0.75rem;
+}
+
+.randomize-row-wrapper.randomize-row-wrapper--expanded {
+    max-height: 8rem;
+    padding-bottom: 0.1rem;
+    margin-bottom: -0.6rem;
+    box-sizing: content-box;
+}
+
+.randomize-row-wrapper.randomize-row-wrapper--collapsing {
+    max-height: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.randomize-row-invisible {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.randomize-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.randomize-row.randomize-row-fade-out {
+    animation: randomize-fade-out 0.3s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes randomize-fade-out {
+    to {
+        opacity: 0;
+    }
+}
+
+.randomize-label {
+    font-size: 0.9rem;
+    color: #54595d;
+}
+
+.btn-randomize {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    background: #3366cc;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-randomize:hover {
+    background: #2a56b3;
 }
 
 .btn-icon {
@@ -962,6 +1321,14 @@ a.btn-save:hover {
         padding: 0.5rem 1rem 0.5rem 1rem;
     }
 
+    .generator-status-dot {
+        left: 0.5rem;
+    }
+
+    .generator-title {
+        left: 1.1rem;
+    }
+
     .hero-logo h1 {
         font-size: 2rem;
     }
@@ -1210,7 +1577,7 @@ a.btn-save:hover {
     display: flex;
     max-width: 600px;
     margin: 0 auto 1rem auto;
-    border: 2px solid #a2a9b1;
+    border: 1.98px solid #a2a9b1;
     border-radius: 3px;
     overflow: hidden;
     background: #fff;
@@ -1740,14 +2107,21 @@ a.btn-save:hover {
     opacity: 0.92;
 }
 
+/* Google official “Continue with Google” light-theme styling (branding guidelines) */
 .account-page .account-external-google {
     max-width: 650px;
-    background: #3366cc;
+    background: #2f2f2f;
     color: #fff;
+    border: 1px solid #2f2f2f;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
 }
 
 .account-page .account-external-google:hover {
-    background: #2a52a3;
+    background: #404040;
+    border-color: #404040;
 }
 
 .account-page .account-external-microsoft {
