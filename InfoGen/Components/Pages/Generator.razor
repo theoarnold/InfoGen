@@ -36,8 +36,7 @@
         <div class="manual-inputs">
             @* Row 0: always visible *@
             @{ var idx0 = 0; }
-            <div class="manual-input-row">
-                <span class="manual-input-label">1.</span>
+            <div class="manual-input-row @(SuggestionsOpen(idx0) ? "manual-input-row-dropdown-open" : "")">
                 <div class="manual-input-suggest-wrapper search-input-wrapper">
                     <input type="text"
                            class="@ManualInputClass(idx0)"
@@ -85,12 +84,11 @@
             @* Row 1: revealed after user leaves first box with content; wrapper fades in *@
             <div class="second-box-wrapper @(showSecondBox ? "visible" : "")">
                 @{ var idx1 = 1; }
-                <div class="manual-input-row">
-                    <span class="manual-input-label">2.</span>
+                <div class="manual-input-row @(SuggestionsOpen(idx1) ? "manual-input-row-dropdown-open" : "")">
                     <div class="manual-input-suggest-wrapper search-input-wrapper">
                         <input type="text"
                                class="@ManualInputClass(idx1)"
-                               placeholder="e.g: Gordon Brown"
+                               placeholder="Search Wikipedia..."
                                value="@manualUrls[idx1]"
                                @oninput="@(e => OnManualUrlChanged(idx1, e.Value?.ToString()))"
                                @onblur="@OnSecondInputBlur" />
@@ -124,12 +122,11 @@
             {
                 var idx2 = 2;
                 <div class="form-reveal-item">
-                    <div class="manual-input-row">
-                        <span class="manual-input-label">3.</span>
+                    <div class="manual-input-row @(SuggestionsOpen(idx2) ? "manual-input-row-dropdown-open" : "")">
                         <div class="manual-input-suggest-wrapper search-input-wrapper">
                             <input type="text"
                                    class="@ManualInputClass(idx2)"
-                                   placeholder="e.g: Gordon Brown"
+                                   placeholder="Search Wikipedia..."
                                    value="@manualUrls[idx2]"
                                    @oninput="@(e => OnManualUrlChanged(idx2, e.Value?.ToString()))"
                                    @onblur="@(() => CloseSuggestionsAfterDelay(idx2))" />
@@ -161,12 +158,11 @@
                 </div>
                 var idx3 = 3;
                 <div class="form-reveal-item">
-                    <div class="manual-input-row">
-                        <span class="manual-input-label">4.</span>
+                    <div class="manual-input-row @(SuggestionsOpen(idx3) ? "manual-input-row-dropdown-open" : "")">
                         <div class="manual-input-suggest-wrapper search-input-wrapper">
                             <input type="text"
                                    class="@ManualInputClass(idx3)"
-                                   placeholder="e.g: Gordon Brown"
+                                   placeholder="Search Wikipedia..."
                                    value="@manualUrls[idx3]"
                                    @oninput="@(e => OnManualUrlChanged(idx3, e.Value?.ToString()))"
                                    @onblur="@(() => CloseSuggestionsAfterDelay(idx3))" />
@@ -197,7 +193,7 @@
                     </div>
                 </div>
                 <div class="form-reveal-item">
-                    <div class="tone-slider-section">
+                    <div class="tone-slider-section tone-slider-section--stacked">
                         <span class="tone-slider-label">Tone</span>
                         <div class="tone-slider-wrap">
                             <div class="tone-slider-track-wrap">
@@ -704,6 +700,11 @@ else if (isLoading)
             suggestions[index] = null;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private bool SuggestionsOpen(int index)
+    {
+        return suggestionsLoading[index] || (suggestions[index] != null && suggestions[index]!.Count > 0);
     }
 
     private string ManualInputClass(int index)

@@ -189,38 +189,19 @@ a.btn-save:hover {
     opacity: 0;
     max-height: 0;
     overflow: hidden;
-    transform: translateY(-6px);
-    transition: opacity 0.5s ease-out, transform 0.5s ease-out, max-height 0.5s ease-out;
+    transition: opacity 0.5s ease-out, max-height 0.5s ease-out;
 }
 
 .second-box-wrapper.visible {
     opacity: 1;
     max-height: 80px;
     overflow: visible;
-    transform: translateY(0);
 }
 
-/* Form reveal items (boxes 3–4, tone, advanced, actions) – same gap as boxes 1–2 via .manual-inputs */
+/* Form reveal items (boxes 3–4, tone, advanced, actions) – fade in via transition, no animation/transform to avoid stacking context issues */
 .manual-inputs .form-reveal-item {
-    opacity: 0;
-    animation: form-reveal-in 0.35s ease-out forwards;
-}
-
-.manual-inputs .form-reveal-item:nth-child(3) { animation-delay: 0s; }
-.manual-inputs .form-reveal-item:nth-child(4) { animation-delay: 0.08s; }
-.manual-inputs .form-reveal-item:nth-child(5) { animation-delay: 0.16s; }
-.manual-inputs .form-reveal-item:nth-child(6) { animation-delay: 0.24s; }
-.manual-inputs .form-reveal-item:nth-child(7) { animation-delay: 0.32s; }
-
-@keyframes form-reveal-in {
-    from {
-        opacity: 0;
-        transform: translateY(-6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    opacity: 1;
+    transition: opacity 0.35s ease-out;
 }
 
 .mode-toggle {
@@ -262,6 +243,11 @@ a.btn-save:hover {
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    position: relative;
+}
+
+.manual-input-row.manual-input-row-dropdown-open {
+    z-index: 100;
 }
 
 .manual-input-label {
@@ -311,12 +297,21 @@ a.btn-save:hover {
     margin-top: 0.5rem;
 }
 
+.tone-slider-section.tone-slider-section--stacked {
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.tone-slider-section.tone-slider-section--stacked .tone-slider-wrap {
+    max-width: 700px;
+    width: 100%;
+}
+
 .tone-slider-label {
     font-weight: 600;
     color: #54595d;
     min-width: 1.5rem;
-    text-align: right;
-    padding-top: 0.5rem;
+    text-align: left;
 }
 
 .tone-slider-wrap {
@@ -578,7 +573,7 @@ a.btn-save:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     max-height: 200px;
     overflow-y: auto;
-    z-index: 10;
+    z-index: 9999;
 }
 
 .reference-search-wrap .suggest-loading {
@@ -735,6 +730,7 @@ a.btn-save:hover {
     right: 0;
     top: 100%;
     margin: 0;
+    z-index: 9999;
     padding: 0.25rem 0;
     list-style: none;
     background: #fff;
@@ -744,7 +740,6 @@ a.btn-save:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     max-height: 220px;
     overflow-y: auto;
-    z-index: 10;
 }
 
 .suggest-item {
