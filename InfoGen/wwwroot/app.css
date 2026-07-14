@@ -12,6 +12,14 @@ body {
     background-color: #f6f6f6;
     margin: 0;
     padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+button, a, label, .btn-generate, .btn-save, .btn-share, .btn-randomize,
+.site-brand, .header-search-btn, .search-button, .article-card,
+h1, h2, .wiki-title, .hero-logo {
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 body:has(.home-page) {
@@ -106,7 +114,7 @@ a.btn-save:hover {
     text-decoration: none;
     padding: 0.4rem 0.8rem;
     border: 2px solid #3366cc;
-    border-radius: 3px;
+    border-radius: 8px;
 }
 
 .generator-form-auth .auth-profile-link:hover {
@@ -124,7 +132,7 @@ a.btn-save:hover {
     text-decoration: none;
     padding: 0.4rem 0.8rem;
     border: 2px solid #3366cc;
-    border-radius: 3px;
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
@@ -170,10 +178,10 @@ a.btn-save:hover {
 }
 
 .generator-hint-bold {
-    margin: 0.15rem 0 0.75rem 0;
+    margin: 0.15rem 0 0.1rem 0;
     font-size: 1.1rem;
     font-weight: 400;
-    color: #72777d;
+    color: #000;
     font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
     transform-origin: left center;
     animation: generator-hint-pulsate 3s ease-in-out infinite;
@@ -198,17 +206,24 @@ a.btn-save:hover {
     overflow: visible;
 }
 
-/* Form reveal items (boxes 3–4, tone, advanced, actions) – fade in via transition, no animation/transform to avoid stacking context issues */
-.manual-inputs .form-reveal-item {
-    opacity: 1;
-    transition: opacity 0.35s ease-out;
+/* Single group fade for the revealed form section */
+.form-reveal-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    animation: form-group-fade-in 0.4s ease-out;
+}
+
+@keyframes form-group-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .mode-toggle {
     display: flex;
     gap: 0;
     border: 2px solid #3366cc;
-    border-radius: 3px;
+    border-radius: 8px;
     overflow: hidden;
     align-self: flex-start;
 }
@@ -242,6 +257,7 @@ a.btn-save:hover {
 .manual-input-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.6rem;
     position: relative;
 }
@@ -263,7 +279,7 @@ a.btn-save:hover {
     padding: 0.55rem 0.8rem;
     font-size: 0.95rem;
     border: 1px solid #a2a9b1;
-    border-radius: 3px;
+    border-radius: 8px;
     outline: none;
     transition: border-color 0.2s;
 }
@@ -280,6 +296,8 @@ a.btn-save:hover {
     font-size: 0.8rem;
     color: #d33;
     white-space: nowrap;
+    width: 100%;
+    margin-top: -0.3rem;
 }
 
 .manual-input-optional {
@@ -364,22 +382,22 @@ a.btn-save:hover {
 .tone-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 24px;
+    width: 22px;
     height: 22px;
     margin-top: -5px;
     background: #2563eb;
     border: 1px solid #1d4ed8;
-    border-radius: 8px;
+    border-radius: 50%;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .tone-slider::-moz-range-thumb {
-    width: 24px;
+    width: 22px;
     height: 22px;
     background: #2563eb;
     border: 1px solid #1d4ed8;
-    border-radius: 8px;
+    border-radius: 50%;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -430,7 +448,6 @@ a.btn-save:hover {
     background: #f8f9fa;
     border: 1px solid #c8ccd1;
     border-radius: 4px;
-    overflow: hidden;
 }
 
 .advanced-section-header {
@@ -467,16 +484,17 @@ a.btn-save:hover {
 }
 
 .advanced-section-content {
-    overflow: hidden;
     transition: max-height 0.25s ease-out;
 }
 
 .advanced-section-content.collapsed {
     max-height: 0;
+    overflow: hidden;
 }
 
 .advanced-section-content.expanded {
     max-height: 1200px;
+    overflow: visible;
 }
 
 .advanced-section-content-inner {
@@ -549,7 +567,7 @@ a.btn-save:hover {
     padding: 0.55rem 0.8rem;
     font-size: 0.95rem;
     border: 1px solid #a2a9b1;
-    border-radius: 3px;
+    border-radius: 8px;
     outline: none;
     box-sizing: border-box;
 }
@@ -569,7 +587,7 @@ a.btn-save:hover {
     background: #fff;
     border: 1px solid #a2a9b1;
     border-top: none;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 8px 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     max-height: 200px;
     overflow-y: auto;
@@ -596,7 +614,7 @@ a.btn-save:hover {
     padding: 0.2rem 0.4rem 0.2rem 0.5rem;
     background: #e7f1ff;
     border: 1px solid #a7d7f9;
-    border-radius: 3px;
+    border-radius: 8px;
     font-size: 0.9rem;
 }
 
@@ -660,7 +678,7 @@ a.btn-save:hover {
     font-size: 0.95rem;
     font-family: inherit;
     border: 1px solid #a2a9b1;
-    border-radius: 3px;
+    border-radius: 8px;
     outline: none;
     resize: vertical;
     box-sizing: border-box;
@@ -736,7 +754,7 @@ a.btn-save:hover {
     background: #fff;
     border: 1px solid #a2a9b1;
     border-top: none;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 8px 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     max-height: 220px;
     overflow-y: auto;
@@ -801,7 +819,7 @@ a.btn-save:hover {
     color: #fff;
     background: #3366cc;
     border: none;
-    border-radius: 3px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -880,7 +898,7 @@ a.btn-save:hover {
     color: #fff;
     background: #3366cc;
     border: none;
-    border-radius: 3px;
+    border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s ease;
 }
@@ -1192,7 +1210,7 @@ a.btn-save:hover {
     color: #fff;
     background: #3366cc;
     border: none;
-    border-radius: 3px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -1215,20 +1233,22 @@ a.btn-save:hover {
     font-weight: 600;
     color: #2d8a4e;
     background: #e8f5e9;
-    border-radius: 3px;
+    border-radius: 8px;
 }
 
 /* Copy link button */
 .btn-share {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     padding: 0.6rem 1.25rem;
+    min-width: 7rem;
     font-size: 1rem;
     font-weight: 600;
     color: #202122;
     background: #f8f9fa;
     border: 1px solid #a2a9b1;
-    border-radius: 3px;
+    border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s ease, border-color 0.2s ease;
 }
@@ -1343,6 +1363,10 @@ a.btn-save:hover {
 
     .error-banner .btn-generate {
         margin-left: 0;
+    }
+
+    input, textarea, select {
+        font-size: 16px !important;
     }
 }
 
@@ -1489,8 +1513,8 @@ a.btn-save:hover {
         margin-top: 0;
         padding-top: 0;
         padding-bottom: 0;
-        border-width: 0;
         pointer-events: none;
+        transition: opacity 0.3s ease, max-height 0.3s ease 0.3s, margin 0.3s ease 0.3s, padding 0.3s ease 0.3s;
     }
 
     .recent-articles {
@@ -1565,7 +1589,7 @@ a.btn-save:hover {
 
 .search-container {
     text-align: center;
-    margin-bottom: 2.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .search-box {
@@ -1573,7 +1597,7 @@ a.btn-save:hover {
     max-width: 600px;
     margin: 0 auto 1rem auto;
     border: 1.98px solid #a2a9b1;
-    border-radius: 3px;
+    border-radius: 8px;
     overflow: hidden;
     background: #fff;
     transition: border-color 0.2s;
@@ -1659,7 +1683,7 @@ a.btn-save:hover {
 
 /* === Search Results / Article Cards === */
 .search-results {
-    margin-top: 1rem;
+    margin-top: 0.25rem;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -1680,16 +1704,17 @@ a.btn-save:hover {
     padding: 0.6rem 2rem;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #3366cc;
-    background: #fff;
+    color: #fff;
+    background: #3366cc;
     border: 2px solid #3366cc;
-    border-radius: 3px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .load-more-btn:hover:not(:disabled) {
-    background: #3366cc;
+    background: #2952a3;
+    border-color: #2952a3;
     color: #fff;
 }
 
@@ -1789,7 +1814,7 @@ a.btn-save:hover {
     padding: 0.5rem 0.75rem;
     font-size: 1rem;
     border: 1px solid #a2a9b1;
-    border-radius: 3px;
+    border-radius: 8px;
     max-width: 100%;
     box-sizing: border-box;
 }
@@ -1858,7 +1883,7 @@ a.btn-save:hover {
     padding: 0.25rem 0.75rem;
     font-size: 0.85rem;
     font-weight: 600;
-    border-radius: 3px;
+    border-radius: 8px;
     margin: 0;
     flex-shrink: 0;
 }
@@ -1886,7 +1911,7 @@ a.btn-save:hover {
     color: #6b5a0a;
     background: #f0e130;
     border: 1px solid #c9b800;
-    border-radius: 3px;
+    border-radius: 8px;
     vertical-align: middle;
 }
 
@@ -1898,6 +1923,18 @@ a.btn-save:hover {
 
 .subscription-form {
     margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.subscription-price-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #a2a9b1;
+    border-radius: 6px;
+    background: #fff;
 }
 
 .subscription-subscribe-btn {
@@ -1967,7 +2004,7 @@ a.btn-save:hover {
     padding: 0.55rem 0.8rem;
     font-size: 0.95rem;
     border: 1px solid #a2a9b1;
-    border-radius: 3px;
+    border-radius: 8px;
     outline: none;
     box-sizing: border-box;
 }
@@ -1996,7 +2033,7 @@ a.btn-save:hover {
     color: #fff;
     background: #3366cc;
     border: none;
-    border-radius: 3px;
+    border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s;
 }
@@ -2026,7 +2063,7 @@ a.btn-save:hover {
 
 .account-page .account-alert {
     padding: 0.75rem 1rem;
-    border-radius: 3px;
+    border-radius: 8px;
     margin-bottom: 1rem;
     font-size: 0.9rem;
 }
@@ -2050,7 +2087,7 @@ a.btn-save:hover {
     text-decoration: none;
     padding: 0.4rem 0.8rem;
     border: 2px solid #3366cc;
-    border-radius: 3px;
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
@@ -2080,7 +2117,7 @@ a.btn-save:hover {
     font-size: 1rem;
     font-weight: 600;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     transition: opacity 0.2s ease;
     display: inline-flex;

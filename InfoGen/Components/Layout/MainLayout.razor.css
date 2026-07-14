@@ -68,9 +68,10 @@
     font-size: 0.85rem;
     border: 1px solid #a2a9b1;
     border-right: none;
-    border-radius: 3px 0 0 3px;
+    border-radius: 8px 0 0 8px;
     outline: none;
     width: 180px;
+    box-sizing: border-box;
 }
 
 .header-search-input:focus {
@@ -81,14 +82,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.34rem 0.55rem;
+    align-self: stretch;
+    padding: 0 0.55rem;
     min-width: 2.25rem;
-    margin-top: -1px;
     background: #3366cc;
     color: #fff;
     border: 1px solid #3366cc;
-    border-radius: 0 3px 3px 0;
+    border-radius: 0 8px 8px 0;
     cursor: pointer;
+    box-sizing: border-box;
 }
 
 .header-search-btn:hover {
