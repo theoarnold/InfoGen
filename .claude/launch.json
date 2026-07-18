@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "infogen-web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "InfoGen/InfoGen.csproj"],
+      "port": 5197
+    }
+  ]
+}

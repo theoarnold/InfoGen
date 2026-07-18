@@ -1,14 +1,22 @@
 @page "/random"
-@using InfoGen.Services
-@inject IArticleStorageService ArticleStorageService
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
-@rendermode InteractiveServer
+@rendermode InteractiveWebAssembly
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        var slug = await ArticleStorageService.GetRandomArticleSlugAsync();
+        string? slug = null;
+        try
+        {
+            var result = await Http.GetFromJsonAsync<RandomArticleResponse>("api/articles/random");
+            slug = result?.Slug;
+        }
+        catch
+        {
+            slug = null;
+        }
         var url = !string.IsNullOrEmpty(slug) ? "/wiki/" + slug : "/";
         NavigationManager.NavigateTo(url, replace: true, forceLoad: true);
     }

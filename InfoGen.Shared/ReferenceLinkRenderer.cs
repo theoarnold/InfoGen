@@ -6,7 +6,6 @@ namespace InfoGen.Services;
 /// <summary>Renders paragraph text with [[Title]] replaced by anchor tags using ReferenceLinks.</summary>
 public static class ReferenceLinkRenderer
 {
-    // This needs looking at properly
     /// <summary>Returns HTML string for the paragraph with [[Title]] turned into &lt;a href="/wiki/Slug"&gt;Title&lt;/a&gt;. Safe to wrap in MarkupString.</summary>
     public static string ToHtml(string paragraph, List<ReferenceLink>? referenceLinks)
     {

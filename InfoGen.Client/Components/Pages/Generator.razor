@@ -1,17 +1,10 @@
 @page "/generate"
-@using InfoGen.Models
-@using InfoGen.Services
-@using Microsoft.AspNetCore.Identity
-@using InfoGen.Data
-@inject IWikipediaService WikipediaService
-@inject IGeminiService GeminiService
-@inject IArticleStorageService ArticleStorageService
-@inject IUsageService UsageService
+@using System.Net
+@inject HttpClient Http
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IServiceProvider ServiceProvider
 @inject ILogger<Generator> Logger
-@rendermode InteractiveServer
+@rendermode InteractiveWebAssembly
 
 <PageTitle>@(generatedArticle != null ? $"{generatedArticle.Title} - Ficipedia" : "Generate Article - Ficipedia")</PageTitle>
 
@@ -33,6 +26,12 @@
                 </AuthorizeView>
             </div>
         </div>
+        @if (usageStatus is not null)
+        {
+            <p class="generator-usage-line">
+                <strong>@usageStatus.TotalAvailable</strong> generation@(usageStatus.TotalAvailable == 1 ? "" : "s") left
+            </p>
+        }
         <p class="generator-hint-bold">@(showRestOfForm ? "Want to add more?" : (showSecondBox ? "Add another..." : "Enter your first source article..."))</p>
         <div class="manual-inputs">
             @* Row 0: always visible *@
@@ -426,6 +425,7 @@ else if (isLoading)
 @code {
     private GeneratedArticle? generatedArticle;
     private List<WikipediaPage> sourcePages = new();
+    private string? sessionToken;
     private bool isLoading;
     private bool isSaving;
     private bool isSaved;
@@ -433,6 +433,8 @@ else if (isLoading)
     private string statusMessage = "";
     private string? errorMessage;
     private int currentStep;
+
+    private UsageStatusResponse? usageStatus;
 
     private string[] manualUrls = new string[4] { "", "", "", "" };
     private bool?[] manualValidation = new bool?[4] { null, null, null, null };
@@ -463,6 +465,29 @@ else if (isLoading)
     private bool randomizeFading;
     private bool randomizeRowHiddenAfterFirstEntry;
     private bool wrapperCollapsing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsageStatusAsync();
+    }
+
+    private async Task LoadUsageStatusAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState?.User?.Identity?.IsAuthenticated != true)
+        {
+            usageStatus = null;
+            return;
+        }
+        try
+        {
+            usageStatus = await Http.GetFromJsonAsync<UsageStatusResponse>("api/usage/status");
+        }
+        catch
+        {
+            usageStatus = null;
+        }
+    }
 
     private void OnFirstInputBlur()
     {
@@ -522,7 +547,8 @@ else if (isLoading)
         await InvokeAsync(StateHasChanged);
         try
         {
-            var results = await ArticleStorageService.SearchArticlesAsync(query.Trim(), 0, 10);
+            var results = await Http.GetFromJsonAsync<List<SavedArticleSummary>>(
+                $"api/articles/search?q={Uri.EscapeDataString(query.Trim())}&skip=0&take=10", cancel) ?? new();
             if (!cancel.IsCancellationRequested)
                 referenceSearchResults = results;
         }
@@ -558,23 +584,7 @@ else if (isLoading)
         StateHasChanged();
     }
 
-    private string subscriptionStatus = "none";
-
     private int FilledUrlCount => manualUrls.Count(u => !string.IsNullOrWhiteSpace(u));
-
-    protected override async Task OnInitializedAsync()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        if (authState?.User?.Identity?.IsAuthenticated != true) return;
-
-        var stripeService = ServiceProvider.GetService<IStripeService>();
-        if (stripeService is null) return;
-
-        var userManager = ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var user = await userManager.FindByNameAsync(authState.User.Identity!.Name!);
-        if (user is not null)
-            subscriptionStatus = await stripeService.GetSubscriptionStatusAsync(user);
-    }
 
     private bool CanGenerate
     {
@@ -642,7 +652,8 @@ else if (isLoading)
 
         try
         {
-            var results = await WikipediaService.SearchTitlesAsync(value.Trim(), 10);
+            var results = await Http.GetFromJsonAsync<List<string>>(
+                $"api/wikipedia/search-titles?q={Uri.EscapeDataString(value.Trim())}&limit=10", cancel) ?? new();
             if (!cancel.IsCancellationRequested)
                 suggestions[index] = results;
         }
@@ -718,38 +729,20 @@ else if (isLoading)
         return input.Replace('_', ' ');
     }
 
+    private async Task<WikipediaPage?> GetWikipediaPageAsync(string title)
+    {
+        var response = await Http.GetAsync($"api/wikipedia/page?title={Uri.EscapeDataString(title)}");
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WikipediaPage>();
+    }
+
     private async Task GenerateArticle()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState?.User?.Identity?.IsAuthenticated != true)
         {
             Navigation.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString("/generate")}", forceLoad: true);
-            return;
-        }
-
-        var userManager = ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var user = await userManager.FindByNameAsync(authState.User.Identity!.Name!);
-        if (user is null)
-        {
-            Navigation.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString("/generate")}", forceLoad: true);
-            return;
-        }
-
-        var stripeService = ServiceProvider.GetService<IStripeService>();
-        if (stripeService is not null)
-        {
-            var subStatus = await stripeService.GetSubscriptionStatusAsync(user);
-            if (subStatus != "active")
-            {
-                Navigation.NavigateTo("/Account/Profile?status=subscribe_required", forceLoad: true);
-                return;
-            }
-        }
-
-        if (!await UsageService.CanGenerateAsync(user))
-        {
-            errorMessage = "You've reached your monthly generation limit. Try again next month.";
-            StateHasChanged();
             return;
         }
 
@@ -765,6 +758,7 @@ else if (isLoading)
         {
             currentStep = 1;
 
+            List<WikipediaPage>? manualPages = null;
             if (FilledUrlCount >= 2)
             {
                 statusMessage = "Validating Wikipedia articles...";
@@ -776,7 +770,7 @@ else if (isLoading)
                     if (string.IsNullOrWhiteSpace(manualUrls[i])) continue;
 
                     var title = ExtractTitleFromUrl(manualUrls[i]);
-                    var page = await WikipediaService.GetPageByTitleAsync(title);
+                    var page = await GetWikipediaPageAsync(title);
 
                     if (page == null)
                     {
@@ -799,13 +793,12 @@ else if (isLoading)
                     return;
                 }
 
-                sourcePages = validPages;
+                manualPages = validPages;
             }
             else
             {
                 statusMessage = "Fetching Wikipedia articles...";
                 StateHasChanged();
-                sourcePages = await WikipediaService.GetRandomPagesAsync(4);
             }
 
             currentStep = 2;
@@ -814,18 +807,50 @@ else if (isLoading)
 
             var trimmedAdditional = string.IsNullOrWhiteSpace(additionalPrompt) ? null : TrimToWordLimit(additionalPrompt.Trim(), 100);
             var refs = selectedReferences.Count > 0 ? selectedReferences : null;
-            generatedArticle = await GeminiService.GenerateMashupArticleAsync(sourcePages, selectedTone, trimmedAdditional, refs);
+
+            var textResponse = await Http.PostAsJsonAsync("api/generation/text", new GenerateTextRequest
+            {
+                SourcePages = manualPages,
+                Tone = selectedTone,
+                AdditionalPrompt = trimmedAdditional,
+                ReferenceLinks = refs
+            });
+
+            if (textResponse.StatusCode == HttpStatusCode.Forbidden)
+            {
+                var error = await textResponse.Content.ReadFromJsonAsync<GenerationErrorResponse>();
+                if (error?.Reason == "generation_unavailable")
+                {
+                    isLoading = false;
+                    errorMessage = "You're out of generations. Buy more or subscribe on your Profile page.";
+                    await LoadUsageStatusAsync();
+                    StateHasChanged();
+                    return;
+                }
+            }
+            textResponse.EnsureSuccessStatusCode();
+            var textResult = await textResponse.Content.ReadFromJsonAsync<GenerateTextResponse>();
+            generatedArticle = textResult!.Article;
+            sourcePages = textResult.SourcePages;
+            sessionToken = textResult.SessionToken;
 
             currentStep = 3;
             statusMessage = "Generating an image...";
             StateHasChanged();
 
-            var imageDataUrl = await GeminiService.GenerateImageAsync(generatedArticle.ImageDescription);
-            generatedArticle.ImageDataUrl = imageDataUrl;
+            var imageResponse = await Http.PostAsJsonAsync("api/generation/image", new GenerateImageRequest
+            {
+                ImageDescription = generatedArticle.ImageDescription,
+                SessionToken = textResult.SessionToken
+            });
+            imageResponse.EnsureSuccessStatusCode();
+            var imageResult = await imageResponse.Content.ReadFromJsonAsync<GenerateImageResponse>();
+            generatedArticle.ImageDataUrl = imageResult?.ImageDataUrl;
 
             currentStep = 4;
 
-            await UsageService.RecordGenerationAsync(user);
+            // Keep the remaining-generations count in sync after consuming one.
+            await LoadUsageStatusAsync();
         }
         catch (Exception ex)
         {
@@ -846,18 +871,18 @@ else if (isLoading)
         isSaving = true;
         try
         {
-            string? userId = null;
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            if (authState?.User?.Identity?.IsAuthenticated == true)
-            {
-                var userManager = ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-                var user = await userManager.FindByNameAsync(authState.User.Identity!.Name!);
-                userId = user?.Id;
-            }
             var refs = selectedReferences.Count > 0 ? selectedReferences : null;
-            var result = await ArticleStorageService.SaveArticleAsync(generatedArticle, sourcePages, userId, refs);
+            var response = await Http.PostAsJsonAsync("api/articles", new SaveArticleRequest
+            {
+                Article = generatedArticle,
+                SourcePages = sourcePages,
+                ReferenceLinks = refs,
+                SessionToken = sessionToken ?? ""
+            });
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<SavedArticleSummary>();
             isSaved = true;
-            savedSlug = result.Slug;
+            savedSlug = result!.Slug;
         }
         catch (Exception ex)
         {
@@ -875,6 +900,7 @@ else if (isLoading)
     {
         generatedArticle = null;
         sourcePages = new();
+        sessionToken = null;
         errorMessage = null;
         isSaved = false;
         savedSlug = null;

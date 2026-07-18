@@ -22,8 +22,8 @@ public class GeminiService : IGeminiService
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"]
             ?? throw new InvalidOperationException("Gemini:ApiKey is not configured in appsettings.json");
-        _textModel = configuration["Gemini:TextModel"] ?? "gemini-3-flash-preview";
-        _imageModel = configuration["Gemini:ImageModel"] ?? "gemini-2.0-flash-exp-image-generation";
+        _textModel = configuration["Gemini:TextModel"] ?? "gemini-3.5-flash";
+        _imageModel = configuration["Gemini:ImageModel"] ?? "gemini-3.1-flash-image";
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public class GeminiService : IGeminiService
                     {
                         ["title"] = new { type = "STRING", description = "Article title. If biographical, use only the person's name." },
                         ["imageDescription"] = new { type = "STRING", description = "Short Wikipedia-style caption: subject and setting in one phrase." },
-                        ["intro"] = new { type = "STRING", description = "Lead section: 1-2 paragraphs with no heading. Use \\n\\n between paragraphs." },
+                        ["intro"] = new { type = "STRING", description = "Lead section: 1-2 paragraphs with no heading. Separate paragraphs with a blank line (a real line break, not the characters backslash-n)." },
                         ["sections"] = new
                         {
                             type = "ARRAY",
@@ -69,7 +69,7 @@ public class GeminiService : IGeminiService
                                 properties = new Dictionary<string, object>
                                 {
                                     ["heading"] = new { type = "STRING", description = "Section heading (e.g. Early life, Career, History)." },
-                                    ["content"] = new { type = "STRING", description = "Section body text. Use \\n\\n between paragraphs." }
+                                    ["content"] = new { type = "STRING", description = "Section body text. Separate paragraphs with a blank line (a real line break, not the characters backslash-n)." }
                                 },
                                 required = new[] { "heading", "content" }
                             }
@@ -153,7 +153,8 @@ public class GeminiService : IGeminiService
             },
             GenerationConfig = new GeminiGenerationConfig
             {
-                ResponseModalities = new[] { "IMAGE", "TEXT" }
+                ResponseModalities = new[] { "IMAGE", "TEXT" },
+                ImageConfig = new GeminiImageConfig { AspectRatio = "1:1" }
             }
         };
 
@@ -295,14 +296,7 @@ public class GeminiService : IGeminiService
         return article;
     }
 
-    /// <summary>Splits a block of text into paragraphs by double newlines.</summary>
-    private static List<string> SplitParagraphs(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return new List<string>();
-        return text.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(p => p.Replace("\n", " ").Trim())
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
-    }
+    /// <summary>Splits a block of text into paragraphs by blank lines.</summary>
+    private static List<string> SplitParagraphs(string? text) => ParagraphSplitter.Split(text);
 }
 

@@ -4,6 +4,7 @@ using InfoGen.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InfoGen.Data.Migrations
 {
     [DbContext(typeof(InfoGenDbContext))]
-    partial class InfoGenDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260717141902_AddArticleViewCounts")]
+    partial class AddArticleViewCounts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -209,6 +212,8 @@ namespace InfoGen.Data.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique();
+
+                    b.HasIndex("DailyViewsDate", "DailyViews");
 
                     b.ToTable("SavedArticles");
                 });

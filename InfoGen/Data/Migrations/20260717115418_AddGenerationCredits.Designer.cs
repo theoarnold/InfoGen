@@ -4,6 +4,7 @@ using InfoGen.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InfoGen.Data.Migrations
 {
     [DbContext(typeof(InfoGenDbContext))]
-    partial class InfoGenDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260717115418_AddGenerationCredits")]
+    partial class AddGenerationCredits
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -161,12 +164,6 @@ namespace InfoGen.Data.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("DailyViews")
-                        .HasColumnType("int");
-
-                    b.Property<DateOnly?>("DailyViewsDate")
-                        .HasColumnType("date");
-
                     b.Property<string>("ImageDescription")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -201,9 +198,6 @@ namespace InfoGen.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("TotalViews")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

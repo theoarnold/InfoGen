@@ -6,17 +6,20 @@ using InfoGen.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using InfoGen.Components.Account;
+using InfoGen.Endpoints;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveWebAssemblyComponents();
 
+builder.Services.AddAuthorization();
+builder.Services.AddMemoryCache();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 
 var config = builder.Configuration;
 
@@ -70,7 +73,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 // Register HttpClient and services
 builder.Services.AddHttpClient<IWikipediaService, WikipediaService>(client =>
 {
-    client.DefaultRequestHeaders.Add("User-Agent", "InfoGen/1.0 (https://github.com/yourusername/InfoGen; contact@example.com)");
+    client.DefaultRequestHeaders.Add("User-Agent", "Ficipedia/1.0 (https://www.ficipedia.com)");
 });
 builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
 {
@@ -79,6 +82,7 @@ builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
 
 // Storage services
 builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
+builder.Services.AddScoped<ISubscriberStatusService, SubscriberStatusService>();
 builder.Services.AddScoped<IArticleStorageService, ArticleStorageService>();
 
 // Stripe
@@ -111,13 +115,21 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseStaticFiles();
 app.UseAntiforgery();
 
+app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(InfoGen.Client._Imports).Assembly);
 
 app.MapAdditionalIdentityEndpoints();
+
+app.MapArticleEndpoints();
+app.MapWikipediaEndpoints();
+app.MapGenerationEndpoints();
+app.MapUsageEndpoints();
+app.MapSeoEndpoints();
+app.MapStripeWebhookEndpoints();
 
 var stripeGroup = app.MapGroup("/stripe").RequireAuthorization();
 
@@ -180,6 +192,33 @@ stripeGroup.MapPost("/create-portal", async (
         returnUrl: $"{baseUrl}/Account/Profile");
 
     return Results.Redirect(portalUrl);
+});
+
+stripeGroup.MapPost("/create-credit-checkout", async (
+    HttpContext context,
+    UserManager<ApplicationUser> userManager,
+    IStripeService stripeService,
+    [FromForm] int packSize) =>
+{
+    var user = await userManager.GetUserAsync(context.User);
+    if (user is null) return Results.Redirect("/Account/Login");
+
+    var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+    string checkoutUrl;
+    try
+    {
+        checkoutUrl = await stripeService.CreateCreditPackCheckoutSessionAsync(
+            user,
+            packSize,
+            successUrl: $"{baseUrl}/Account/Profile?status=credits_purchased",
+            cancelUrl: $"{baseUrl}/Account/Profile?status=cancelled");
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.Redirect("/Account/Profile?status=invalid_pack");
+    }
+
+    return Results.Redirect(checkoutUrl);
 });
 
 app.Run();

@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="InfoGen/InfoGen.csproj" />
+  <Project Path="InfoGen.Shared/InfoGen.Shared.csproj" />
+  <Project Path="InfoGen.Client/InfoGen.Client.csproj" />
 </Solution>

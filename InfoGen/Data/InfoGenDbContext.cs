@@ -10,6 +10,7 @@ public class InfoGenDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<SavedArticleEntity> SavedArticles => Set<SavedArticleEntity>();
     public DbSet<MonthlyGenerationUsage> MonthlyGenerationUsage => Set<MonthlyGenerationUsage>();
+    public DbSet<GenerationCreditPurchase> GenerationCreditPurchases => Set<GenerationCreditPurchase>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +34,13 @@ public class InfoGenDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.HasKey(e => new { e.UserId, e.Year, e.Month });
             entity.Property(e => e.UserId).HasMaxLength(450);
+        });
+        modelBuilder.Entity<GenerationCreditPurchase>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).HasMaxLength(450);
+            entity.Property(e => e.StripeCheckoutSessionId).HasMaxLength(255);
+            entity.HasIndex(e => e.StripeCheckoutSessionId).IsUnique();
         });
     }
 }

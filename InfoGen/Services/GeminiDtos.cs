@@ -21,6 +21,12 @@ public class GeminiPart
 public class GeminiGenerationConfig
 {
     public string[] ResponseModalities { get; set; } = Array.Empty<string>();
+    public GeminiImageConfig? ImageConfig { get; set; }
+}
+
+public class GeminiImageConfig
+{
+    public string? AspectRatio { get; set; }
 }
 
 // --- JSON response DTOs from Gemini structured output ---

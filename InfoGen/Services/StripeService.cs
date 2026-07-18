@@ -8,6 +8,7 @@ namespace InfoGen.Services;
 public class StripeService : IStripeService
 {
     private readonly string _priceId;
+    private readonly Dictionary<int, string> _creditPackPriceIds;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<StripeService> _logger;
     private readonly HashSet<string> _complimentaryProEmails;
@@ -21,6 +22,13 @@ public class StripeService : IStripeService
         _userManager = userManager;
         _logger = logger;
 
+        _creditPackPriceIds = new Dictionary<int, string>();
+        foreach (var child in configuration.GetSection("Stripe:CreditPackPriceIds").GetChildren())
+        {
+            if (int.TryParse(child.Key, out var packSize) && !string.IsNullOrEmpty(child.Value))
+                _creditPackPriceIds[packSize] = child.Value;
+        }
+
         var list = configuration["Pro:ComplimentaryEmails"] ?? "";
         _complimentaryProEmails = new HashSet<string>(
             list.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
@@ -31,18 +39,7 @@ public class StripeService : IStripeService
 
     public async Task<string> CreateCheckoutSessionAsync(ApplicationUser user, string successUrl, string cancelUrl)
     {
-        if (string.IsNullOrEmpty(user.StripeCustomerId))
-        {
-            var customerService = new CustomerService();
-            var customer = await customerService.CreateAsync(new CustomerCreateOptions
-            {
-                Email = user.Email,
-                Metadata = new Dictionary<string, string> { ["UserId"] = user.Id }
-            });
-            user.StripeCustomerId = customer.Id;
-            await _userManager.UpdateAsync(user);
-            _logger.LogInformation("Created Stripe customer {CustomerId} for user {UserId}", customer.Id, user.Id);
-        }
+        await EnsureStripeCustomerAsync(user);
 
         var sessionService = new SessionService();
         var session = await sessionService.CreateAsync(new SessionCreateOptions
@@ -55,6 +52,48 @@ public class StripeService : IStripeService
         });
 
         return session.Url;
+    }
+
+    public async Task<string> CreateCreditPackCheckoutSessionAsync(ApplicationUser user, int packSize, string successUrl, string cancelUrl)
+    {
+        if (!_creditPackPriceIds.TryGetValue(packSize, out var priceId))
+            throw new InvalidOperationException($"No configured credit pack for size {packSize}.");
+
+        await EnsureStripeCustomerAsync(user);
+
+        var sessionService = new SessionService();
+        var session = await sessionService.CreateAsync(new SessionCreateOptions
+        {
+            Customer = user.StripeCustomerId,
+            Mode = "payment",
+            LineItems = [new SessionLineItemOptions { Price = priceId, Quantity = 1 }],
+            SuccessUrl = successUrl,
+            CancelUrl = cancelUrl,
+            // Read by the webhook to credit the right account with the right amount.
+            Metadata = new Dictionary<string, string>
+            {
+                ["UserId"] = user.Id,
+                ["Credits"] = packSize.ToString()
+            }
+        });
+
+        return session.Url;
+    }
+
+    private async Task EnsureStripeCustomerAsync(ApplicationUser user)
+    {
+        if (!string.IsNullOrEmpty(user.StripeCustomerId))
+            return;
+
+        var customerService = new CustomerService();
+        var customer = await customerService.CreateAsync(new CustomerCreateOptions
+        {
+            Email = user.Email,
+            Metadata = new Dictionary<string, string> { ["UserId"] = user.Id }
+        });
+        user.StripeCustomerId = customer.Id;
+        await _userManager.UpdateAsync(user);
+        _logger.LogInformation("Created Stripe customer {CustomerId} for user {UserId}", customer.Id, user.Id);
     }
 
     public async Task<string> GetSubscriptionStatusAsync(ApplicationUser user)

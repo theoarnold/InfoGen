@@ -187,6 +187,21 @@ a.btn-save:hover {
     animation: generator-hint-pulsate 3s ease-in-out infinite;
 }
 
+.generator-usage-line {
+    display: inline-block;
+    margin: 0.1rem 0 0.5rem 0;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.9rem;
+    color: #202122;
+    background: #eaf3ff;
+    border: 1px solid #c8ddf5;
+    border-radius: 6px;
+}
+
+.generator-usage-line strong {
+    font-weight: 700;
+}
+
 @keyframes generator-hint-pulsate {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.015); }
@@ -1174,10 +1189,46 @@ a.btn-save:hover {
 }
 
 /* === Article Actions === */
-.article-generated-by {
+.article-footer-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
     margin: 1.5rem 0 0 0;
+}
+
+.article-views {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    font-size: 0.9rem;
+    color: #54595d;
+    white-space: nowrap;
+}
+
+.article-views svg {
+    opacity: 0.75;
+}
+
+.article-generated-by {
+    margin: 0;
     font-size: 0.95rem;
     color: #54595d;
+}
+
+/* Gold author styling for active subscribers */
+.author-name--pro {
+    color: #c8a415;
+    text-shadow: 0 0 1px rgba(200, 164, 21, 0.25);
+}
+
+.author-star {
+    margin-left: 0.25rem;
+    color: #f5c518;
+    font-size: 0.9em;
+    text-shadow: 0 0 2px rgba(245, 197, 24, 0.5);
 }
 
 .article-generated-by em {
@@ -1268,6 +1319,51 @@ a.btn-save:hover {
     padding: 0.8rem 1.25rem;
 }
 
+.share-menu-wrapper {
+    position: relative;
+    display: inline-flex;
+}
+
+.share-menu {
+    position: absolute;
+    bottom: calc(100% + 0.5rem);
+    right: 0;
+    min-width: 10rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.4rem;
+    background: #fff;
+    border: 1px solid #a2a9b1;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 20;
+}
+
+.share-menu[hidden] {
+    display: none;
+}
+
+.share-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #202122;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.share-menu-item:hover {
+    background: #f0f0f0;
+}
+
 /* On mobile: Generate Article + Copy link side by side, Generate wider */
 @media (max-width: 700px) {
     .article-actions-pair {
@@ -1282,8 +1378,14 @@ a.btn-save:hover {
         text-align: center;
     }
 
-    .article-actions-pair .btn-share {
+    .article-actions-pair .btn-share,
+    .article-actions-pair .share-menu-wrapper {
         flex-shrink: 0;
+    }
+
+    .share-menu {
+        right: 0;
+        left: auto;
     }
 }
 
@@ -1567,17 +1669,35 @@ a.btn-save:hover {
         -webkit-overflow-scrolling: touch;
     }
 
+    /* Column layout so the tab bar keeps its natural height and only the list below it scrolls. */
     .recent-articles {
         flex: 1;
         min-height: 0;
         overflow: hidden;
         margin-top: 0.5rem;
+        display: flex;
+        flex-direction: column;
     }
 
+    .article-tabs {
+        flex: 0 0 auto;
+    }
+
+    /* Sizing only - the scrolling/scrollbar rules live in the later max-width block
+       so they win over the base `.recent-articles-list { overflow: hidden }`. */
     .recent-articles-list {
-        height: 100%;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        flex: 1;
+        min-height: 0;
+        /* Must exceed the 2.25rem bottom fade below, so the last card can scroll clear of it. */
+        padding-bottom: 3rem;
+    }
+
+    /* Short bottom fade as a "more below" hint. The desktop fade covers ~45% of the
+       container, which would wash out items the user is actively scrolling to. */
+    .recent-articles::after {
+        bottom: 0;
+        height: 2.25rem;
+        background: linear-gradient(to bottom, rgba(246,246,246,0) 0%, rgba(246,246,246,1) 100%);
     }
 }
 
@@ -1681,6 +1801,25 @@ a.btn-save:hover {
     }
 }
 
+/* Mobile: let Recent / Top Today scroll, with the scrollbar hidden.
+   Must come after the base `.recent-articles-list { overflow: hidden }` above -
+   same specificity, so source order decides which one wins. */
+@media (max-width: 767px) {
+    .recent-articles-list {
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* legacy Edge/IE */
+    }
+
+    .recent-articles-list::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+    }
+}
+
 /* === Search Results / Article Cards === */
 .search-results {
     margin-top: 0.25rem;
@@ -1730,6 +1869,49 @@ a.btn-save:hover {
     border-bottom: 1px solid #eaecf0;
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
+}
+
+/* Recent / Top Today tab bar */
+.article-tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 1px solid #eaecf0;
+    margin-bottom: 1rem;
+}
+
+.article-tab {
+    appearance: none;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 0.5rem 0.85rem;
+    font-size: 1rem;
+    color: #54595d;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.article-tab:hover {
+    color: #202122;
+}
+
+.article-tab.active {
+    color: #202122;
+    font-weight: 600;
+    border-bottom-color: #3366cc;
+}
+
+.article-card-views {
+    font-size: 0.85rem;
+    color: #3366cc;
+    font-weight: 600;
+}
+
+.tab-empty {
+    color: #72777d;
+    font-size: 0.95rem;
+    padding: 1rem 0.25rem;
 }
 
 .article-card {
@@ -1919,6 +2101,108 @@ a.btn-save:hover {
     font-size: 0.95rem;
     color: #54595d;
     margin: 0.5rem 0;
+}
+
+.generations-available {
+    font-size: 1rem;
+    color: #202122;
+    margin: 0.25rem 0 1rem 0;
+    padding: 0.6rem 1rem;
+    background: #eaf3ff;
+    border: 1px solid #c8ddf5;
+    border-radius: 6px;
+}
+
+.credit-packages-section {
+    margin: 0.5rem 0 1.5rem 0;
+}
+
+.credit-packages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.credit-package-card {
+    position: relative;
+    flex: 1;
+    min-width: 8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 1.1rem 1rem 1rem 1rem;
+    background: #f8f9fa;
+    border: 1px solid #c8ccd1;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.credit-package-card--best {
+    border-color: #c9b800;
+    background: #fffdf0;
+}
+
+.credit-package-count {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #202122;
+}
+
+.credit-package-label {
+    font-size: 0.85rem;
+    color: #72777d;
+}
+
+.credit-package-price {
+    margin: 0.35rem 0 0.6rem 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #3366cc;
+}
+
+.credit-package-btn {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    background: #3366cc;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.credit-package-btn:hover {
+    background: #2a52a3;
+}
+
+.credit-package-btn--best {
+    background: #c9b800;
+    color: #3d3600;
+}
+
+.credit-package-btn--best:hover {
+    background: #b3a400;
+}
+
+.best-value-badge {
+    position: absolute;
+    top: -0.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #6b5a0a;
+    background: #f0e130;
+    border: 1px solid #c9b800;
+    border-radius: 8px;
 }
 
 .subscription-form {

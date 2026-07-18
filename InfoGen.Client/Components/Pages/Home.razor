@@ -1,7 +1,6 @@
 @page "/"
-@using InfoGen.Services
-@inject IArticleStorageService ArticleStorageService
-@rendermode InteractiveServer
+@inject HttpClient Http
+@rendermode InteractiveWebAssembly
 
 <PageTitle>Ficipedia - The fictional encyclopedia</PageTitle>
 
@@ -74,22 +73,57 @@
     else if (recentArticles != null && recentArticles.Count > 0)
     {
         <div class="recent-articles">
-            <h2 class="results-heading">Recent Articles</h2>
-            <div class="recent-articles-list">
-                @foreach (var article in recentArticles)
-                {
-                    <a href="/wiki/@article.Slug" class="article-card">
-                        @if (!string.IsNullOrEmpty(article.ImageUrl))
-                        {
-                            <img src="@article.ImageUrl" alt="@article.Title" class="article-card-image" />
-                        }
-                        <div class="article-card-body">
-                            <h3>@article.Title</h3>
-                            <span class="article-card-date">@article.CreatedAt.ToString("MMMM d, yyyy")</span>
-                        </div>
-                    </a>
-                }
+            <div class="article-tabs" role="tablist">
+                <button type="button" role="tab" class="article-tab @(activeTab == HomeTab.Recent ? "active" : "")"
+                        aria-selected="@(activeTab == HomeTab.Recent)" @onclick="() => SetTab(HomeTab.Recent)">Recent</button>
+                <button type="button" role="tab" class="article-tab @(activeTab == HomeTab.TopToday ? "active" : "")"
+                        aria-selected="@(activeTab == HomeTab.TopToday)" @onclick="() => SetTab(HomeTab.TopToday)">Top Today</button>
             </div>
+
+            @if (activeTab == HomeTab.Recent)
+            {
+                <div class="recent-articles-list">
+                    @foreach (var article in recentArticles)
+                    {
+                        <a href="/wiki/@article.Slug" class="article-card">
+                            @if (!string.IsNullOrEmpty(article.ImageUrl))
+                            {
+                                <img src="@article.ImageUrl" alt="@article.Title" class="article-card-image" />
+                            }
+                            <div class="article-card-body">
+                                <h3>@article.Title</h3>
+                                <span class="article-card-date">@article.CreatedAt.ToString("MMMM d, yyyy")</span>
+                            </div>
+                        </a>
+                    }
+                </div>
+            }
+            else if (topTodayArticles == null)
+            {
+                <p class="tab-empty">Loading…</p>
+            }
+            else if (topTodayArticles.Count == 0)
+            {
+                <p class="tab-empty">No articles have been viewed yet today. Check back later!</p>
+            }
+            else
+            {
+                <div class="recent-articles-list">
+                    @foreach (var article in topTodayArticles)
+                    {
+                        <a href="/wiki/@article.Slug" class="article-card">
+                            @if (!string.IsNullOrEmpty(article.ImageUrl))
+                            {
+                                <img src="@article.ImageUrl" alt="@article.Title" class="article-card-image" />
+                            }
+                            <div class="article-card-body">
+                                <h3>@article.Title</h3>
+                                <span class="article-card-views">@article.DailyViews.ToString("N0") view@(article.DailyViews == 1 ? "" : "s") today</span>
+                            </div>
+                        </a>
+                    }
+                </div>
+            }
         </div>
     }
     </div>
@@ -118,7 +152,7 @@
                     {
                         try
                         {
-                            recentArticles = await ArticleStorageService.GetRecentArticlesAsync(10);
+                            recentArticles = await Http.GetFromJsonAsync<List<SavedArticleSummary>>("api/articles/recent?count=10");
                         }
                         catch
                         {
@@ -133,8 +167,30 @@
 
     private List<SavedArticleSummary>? searchResults;
     private List<SavedArticleSummary>? recentArticles;
+    private List<SavedArticleSummary>? topTodayArticles;
     private bool hasMoreResults;
     private bool isLoadingMore;
+
+    private enum HomeTab { Recent, TopToday }
+    private HomeTab activeTab = HomeTab.Recent;
+
+    private async Task SetTab(HomeTab tab)
+    {
+        activeTab = tab;
+        // Refetch each time the tab is opened (cheap, only on explicit click) so the numbers are live.
+        // Keep any previous list visible while the new one loads to avoid a flicker on repeat opens.
+        if (tab == HomeTab.TopToday)
+        {
+            try
+            {
+                topTodayArticles = await Http.GetFromJsonAsync<List<SavedArticleSummary>>("api/articles/top-today?count=10") ?? new();
+            }
+            catch
+            {
+                topTodayArticles ??= new();
+            }
+        }
+    }
 
     private bool IsSearchActive => !string.IsNullOrWhiteSpace(_searchQuery);
 
@@ -149,7 +205,7 @@
         {
             try
             {
-                recentArticles = await ArticleStorageService.GetRecentArticlesAsync(10);
+                recentArticles = await Http.GetFromJsonAsync<List<SavedArticleSummary>>("api/articles/recent?count=10");
             }
             catch
             {
@@ -169,7 +225,8 @@
 
         try
         {
-            searchResults = await ArticleStorageService.SearchArticlesAsync(_searchQuery.Trim(), 0, PageSize);
+            searchResults = await Http.GetFromJsonAsync<List<SavedArticleSummary>>(
+                $"api/articles/search?q={Uri.EscapeDataString(_searchQuery.Trim())}&skip=0&take={PageSize}") ?? new();
             hasMoreResults = searchResults.Count == PageSize;
         }
         catch
@@ -186,8 +243,8 @@
         isLoadingMore = true;
         try
         {
-            var moreResults = await ArticleStorageService.SearchArticlesAsync(
-                _searchQuery.Trim(), searchResults.Count, PageSize);
+            var moreResults = await Http.GetFromJsonAsync<List<SavedArticleSummary>>(
+                $"api/articles/search?q={Uri.EscapeDataString(_searchQuery.Trim())}&skip={searchResults.Count}&take={PageSize}") ?? new();
             searchResults.AddRange(moreResults);
             hasMoreResults = moreResults.Count == PageSize;
         }
