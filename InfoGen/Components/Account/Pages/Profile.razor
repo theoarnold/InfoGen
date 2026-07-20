@@ -158,7 +158,14 @@
             userEmail = user.Email ?? user.UserName;
             displayName = user.DisplayName ?? "";
             if (stripeService is not null)
+            {
                 subscriptionStatus = await stripeService.GetSubscriptionStatusAsync(user);
+
+                // We've just asked Stripe directly, so refresh the cached flag article pages read.
+                // Self-healing: if a webhook was ever missed, loading this page puts it right.
+                await ServiceProvider.GetRequiredService<ISubscriptionStateService>()
+                    .SetAsync(user.Id, subscriptionStatus == "active");
+            }
 
             var isSubscribed = subscriptionStatus == "active";
             var remainingThisMonth = await usageService.GetRemainingGenerationsAsync(user.Id);

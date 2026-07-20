@@ -46,15 +46,21 @@ public static class ArticleEndpoints
             var userId = userManager.GetUserId(context.User);
             if (userId is null) return Results.Unauthorized();
 
-            // Requires a token from a real /api/generation/text call - otherwise this endpoint would
-            // accept fully client-fabricated content with no generation, subscription, or usage check
-            // involved at all.
-            if (!GenerationSessionCache.TryConsumeForSave(cache, request.SessionToken, userId))
+            // The article is read from the session, not the request body. The token is what identifies
+            // which generation is being saved; the content itself never makes a round-trip through the
+            // client, so there is nothing here for a caller to substitute.
+            var session = GenerationSessionCache.TryConsumeForSave(cache, request.SessionToken, userId);
+            if (session is null)
             {
                 return Results.BadRequest("Missing or expired generation session. Please generate the article again before saving.");
             }
 
-            var result = await storage.SaveArticleAsync(request.Article, request.SourcePages, userId, request.ReferenceLinks);
+            // The image likewise comes from the session - it was produced by /api/generation/image on
+            // this server, so the blob upload below can never be fed an arbitrary client payload.
+            var article = session.Article;
+            article.ImageDataUrl = session.ImageDataUrl;
+
+            var result = await storage.SaveArticleAsync(article, session.SourcePages, userId, request.ReferenceLinks);
             return Results.Ok(result);
         }).RequireAuthorization();
 

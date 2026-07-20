@@ -1,51 +1,69 @@
+using InfoGen.Models;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace InfoGen.Endpoints;
 
 /// <summary>
-/// Proves that /api/generation/image and POST /api/articles are being called as part of a
-/// generation that actually passed the subscription/usage gate in /api/generation/text - without
-/// this, a client could skip straight to /image (unlimited free paid-image calls) or straight to
-/// /articles (publishing arbitrary hand-crafted content with no generation involved at all).
-/// One token covers the whole text -> image -> save flow; image generation is single-use per
-/// token (can't be replayed for extra free images), save consumes the token entirely.
+/// Custody of a single generation, from /api/generation/text through /image to POST /api/articles.
+///
+/// The token isn't proof that a generation happened - it IS the article. Content is held server-side
+/// and the save endpoint reads it from the token, so the client never gets to say what is published.
+/// Taking the article from the request body instead would let a caller generate once and then submit
+/// entirely different content to appear on a public page under their name.
 /// </summary>
 internal static class GenerationSessionCache
 {
     private const string KeyPrefix = "gen-session:";
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);
 
-    private sealed record Session(string UserId, bool ImageGenerated);
+    internal sealed record Session(
+        string UserId,
+        GeneratedArticle Article,
+        List<WikipediaPage> SourcePages,
+        bool ImageGenerated,
+        string? ImageDataUrl);
 
-    public static string Issue(IMemoryCache cache, string userId)
+    public static string Issue(IMemoryCache cache, string userId, GeneratedArticle article, List<WikipediaPage> sourcePages)
     {
         var token = Guid.NewGuid().ToString("N");
-        cache.Set(KeyPrefix + token, new Session(userId, ImageGenerated: false), Lifetime);
+        cache.Set(KeyPrefix + token, new Session(userId, article, sourcePages, ImageGenerated: false, ImageDataUrl: null), Lifetime);
         return token;
     }
 
-    /// <summary>Validates the token for the image step and marks it used, so it can't be replayed
-    /// for a second free image - but leaves it valid for the subsequent save step.</summary>
-    public static bool TryConsumeForImage(IMemoryCache cache, string? token, string userId)
+    /// <summary>Marks the token used for the image step so it can't be replayed for a second free
+    /// image, while leaving it valid for the save that follows.</summary>
+    public static bool TryBeginImage(IMemoryCache cache, string? token, string userId, out string imageDescription)
     {
+        imageDescription = "";
         if (string.IsNullOrEmpty(token)) return false;
         var key = KeyPrefix + token;
         if (!cache.TryGetValue(key, out Session? session) || session is null) return false;
         if (session.UserId != userId || session.ImageGenerated) return false;
 
         cache.Set(key, session with { ImageGenerated = true }, Lifetime);
+        imageDescription = session.Article.ImageDescription;
         return true;
     }
 
-    /// <summary>Validates the token for the save step and removes it - single-use for the whole flow.</summary>
-    public static bool TryConsumeForSave(IMemoryCache cache, string? token, string userId)
+    public static void AttachImage(IMemoryCache cache, string? token, string userId, string? imageDataUrl)
     {
-        if (string.IsNullOrEmpty(token)) return false;
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(imageDataUrl)) return;
         var key = KeyPrefix + token;
-        if (!cache.TryGetValue(key, out Session? session) || session is null) return false;
-        if (session.UserId != userId) return false;
+        if (!cache.TryGetValue(key, out Session? session) || session is null) return;
+        if (session.UserId != userId) return;
+
+        cache.Set(key, session with { ImageDataUrl = imageDataUrl }, Lifetime);
+    }
+
+    /// <summary>Consumes the token - single-use for the whole flow.</summary>
+    public static Session? TryConsumeForSave(IMemoryCache cache, string? token, string userId)
+    {
+        if (string.IsNullOrEmpty(token)) return null;
+        var key = KeyPrefix + token;
+        if (!cache.TryGetValue(key, out Session? session) || session is null) return null;
+        if (session.UserId != userId) return null;
 
         cache.Remove(key);
-        return true;
+        return session;
     }
 }

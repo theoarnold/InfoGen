@@ -11,5 +11,13 @@ namespace InfoGen.Data
 
         /// <summary>Running balance of one-time purchased generation credits (separate from the monthly subscription quota).</summary>
         public int PurchasedGenerationCredits { get; set; }
+
+        /// <summary>Cached subscription state, kept current by the Stripe webhook. Exists so that public
+        /// article pages can style a subscriber's name without calling Stripe on every page view - Stripe
+        /// stays the source of truth, this is just a local copy of its last known answer.</summary>
+        public bool IsSubscribed { get; set; }
+
+        /// <summary>When <see cref="IsSubscribed"/> was last refreshed from Stripe (null = never).</summary>
+        public DateTime? SubscriptionCheckedAt { get; set; }
     }
 }

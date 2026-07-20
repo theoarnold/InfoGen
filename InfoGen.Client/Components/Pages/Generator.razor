@@ -311,9 +311,26 @@ else if (isLoading)
             </div>
             <div class="step @(currentStep >= 2 ? "active" : "") @(currentStep > 2 ? "done" : "")">
                 <span class="step-dot"></span>
-                <span>Generating mashup article</span>
+                <span>
+                    Searching for related articles
+                    @if (currentStep > 2)
+                    {
+                        @if (researchFailed)
+                        {
+                            <span class="step-detail">unavailable</span>
+                        }
+                        else
+                        {
+                            <span class="step-detail">found @researchFoundCount</span>
+                        }
+                    }
+                </span>
             </div>
             <div class="step @(currentStep >= 3 ? "active" : "") @(currentStep > 3 ? "done" : "")">
+                <span class="step-dot"></span>
+                <span>Writing the article</span>
+            </div>
+            <div class="step @(currentStep >= 4 ? "active" : "") @(currentStep > 4 ? "done" : "")">
                 <span class="step-dot"></span>
                 <span>Creating image with Nano Banana</span>
             </div>
@@ -329,16 +346,23 @@ else if (isLoading)
         <hr class="wiki-divider" />
 
         <div class="wiki-content-wrapper">
-            @if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl) || generatedArticle.InfoboxFacts.Count > 0)
+            @if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl) || isImageLoading || generatedArticle.InfoboxFacts.Count > 0)
             {
                 <div class="wiki-infobox">
                     <div class="infobox-header">@generatedArticle.Title</div>
-                    @if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl))
+                    @if (isImageLoading)
+                    {
+                        <div class="infobox-image infobox-image--loading">
+                            <div class="infobox-image-spinner"></div>
+                            <span class="infobox-image-label">Creating image…</span>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(generatedArticle.ImageDataUrl))
                     {
                         <div class="infobox-image">
                             <img src="@generatedArticle.ImageDataUrl" alt="@generatedArticle.Title" />
                         </div>
-                        <div class="infobox-caption">@generatedArticle.ImageDescription</div>
+                        <div class="infobox-caption">@((MarkupString)ReferenceLinkRenderer.ToHtml(generatedArticle.ImageDescription, PreviewLinks))</div>
                     }
                     @if (generatedArticle.InfoboxFacts.Count > 0)
                     {
@@ -347,7 +371,7 @@ else if (isLoading)
                             {
                                 <tr>
                                     <th>@fact.Label</th>
-                                    <td>@fact.Value</td>
+                                    <td>@((MarkupString)ReferenceLinkRenderer.ToHtml(fact.Value, PreviewLinks))</td>
                                 </tr>
                             }
                         </table>
@@ -364,7 +388,7 @@ else if (isLoading)
                     }
                     @foreach (var paragraph in articleSection.Paragraphs)
                     {
-                        <p>@((MarkupString)ReferenceLinkRenderer.ToHtml(paragraph, selectedReferences))</p>
+                        <p>@((MarkupString)ReferenceLinkRenderer.ToHtml(paragraph, PreviewLinks))</p>
                     }
                 }
             </div>
@@ -391,10 +415,15 @@ else if (isLoading)
             </button>
             @if (!isSaved)
             {
-                <button class="btn-save" @onclick="SaveArticle" disabled="@isSaving">
+                @* Saving before the image lands would store the article without one, permanently. *@
+                <button class="btn-save" @onclick="SaveArticle" disabled="@(isSaving || isImageLoading)">
                     @if (isSaving)
                     {
                         <span>Saving...</span>
+                    }
+                    else if (isImageLoading)
+                    {
+                        <span>Waiting for image…</span>
                     }
                     else
                     {
@@ -427,6 +456,17 @@ else if (isLoading)
     private List<WikipediaPage> sourcePages = new();
     private string? sessionToken;
     private bool isLoading;
+
+    /// <summary>True while the image is still being generated after the article is already on screen.</summary>
+    private bool isImageLoading;
+
+    /// <summary>How many existing articles the research step turned up, shown next to that stage.</summary>
+    private int researchFoundCount;
+
+    /// <summary>True when the research call didn't complete (e.g. endpoint not deployed). Distinguishes
+    /// "searched and found nothing" from "never ran", which otherwise look identical.</summary>
+    private bool researchFailed;
+
     private bool isSaving;
     private bool isSaved;
     private string? savedSlug;
@@ -454,6 +494,18 @@ else if (isLoading)
     private bool referenceSearchLoading;
     private CancellationTokenSource? referenceSearchCts;
     private List<ReferenceLink> selectedReferences = new();
+
+    /// <summary>Links the server resolved from the generated body - includes articles the model found
+    /// on its own, which the client would otherwise know nothing about.</summary>
+    private List<ReferenceLink> resolvedReferences = new();
+
+    /// <summary>What the preview renders with: the user's manual picks plus whatever the model linked.</summary>
+    private List<ReferenceLink> PreviewLinks =>
+        selectedReferences
+            .Concat(resolvedReferences)
+            .GroupBy(r => r.Slug)
+            .Select(g => g.First())
+            .ToList();
 
     private const int MaxReferences = 5;
 
@@ -751,6 +803,7 @@ else if (isLoading)
         savedSlug = null;
         errorMessage = null;
         generatedArticle = null;
+        isImageLoading = false;
         sourcePages = new();
         currentStep = 0;
 
@@ -801,8 +854,46 @@ else if (isLoading)
                 StateHasChanged();
             }
 
+            // Stage 2: let the model search existing articles for things worth linking. Its own call so
+            // this is a real step rather than a guess at when it finishes.
             currentStep = 2;
-            statusMessage = "Writing an article...";
+            statusMessage = "Searching for related articles...";
+            StateHasChanged();
+
+            string? researchToken = null;
+            researchFoundCount = 0;
+            researchFailed = false;
+            try
+            {
+                var researchResponse = await Http.PostAsJsonAsync("api/generation/research", new ResearchRequest
+                {
+                    SourcePages = manualPages
+                });
+                if (researchResponse.IsSuccessStatusCode)
+                {
+                    var researchResult = await researchResponse.Content.ReadFromJsonAsync<ResearchResponse>();
+                    researchToken = researchResult?.ResearchToken;
+                    researchFoundCount = researchResult?.FoundCount ?? 0;
+                    Logger.LogInformation("Research step found {Count} article(s)", researchFoundCount);
+                }
+                else
+                {
+                    // Surfaced rather than swallowed: a 404 here (endpoint not deployed) previously looked
+                    // exactly like "searched and found nothing", which made it invisible.
+                    researchFailed = true;
+                    var body = await researchResponse.Content.ReadAsStringAsync();
+                    Logger.LogWarning("Research step returned {Status}: {Body}", researchResponse.StatusCode, body);
+                }
+            }
+            catch (Exception ex)
+            {
+                researchFailed = true;
+                // Never fatal - /text researches inline when no token arrives.
+                Logger.LogWarning(ex, "Research step failed; continuing without it.");
+            }
+
+            currentStep = 3;
+            statusMessage = "Writing the article...";
             StateHasChanged();
 
             var trimmedAdditional = string.IsNullOrWhiteSpace(additionalPrompt) ? null : TrimToWordLimit(additionalPrompt.Trim(), 100);
@@ -813,7 +904,8 @@ else if (isLoading)
                 SourcePages = manualPages,
                 Tone = selectedTone,
                 AdditionalPrompt = trimmedAdditional,
-                ReferenceLinks = refs
+                ReferenceLinks = refs,
+                ResearchToken = researchToken
             });
 
             if (textResponse.StatusCode == HttpStatusCode.Forbidden)
@@ -833,24 +925,31 @@ else if (isLoading)
             generatedArticle = textResult!.Article;
             sourcePages = textResult.SourcePages;
             sessionToken = textResult.SessionToken;
+            resolvedReferences = textResult.ReferenceLinks ?? new();
+            Logger.LogInformation("Generation returned {Count} resolved reference link(s)", resolvedReferences.Count);
 
-            currentStep = 3;
-            statusMessage = "Generating an image...";
+            // Show the article the moment the text is ready. The image takes a further ~10-15s and the
+            // reader shouldn't sit on a spinner waiting for a picture before they can read anything.
+            currentStep = 5;
+            isLoading = false;
+            isImageLoading = true;
             StateHasChanged();
 
-            var imageResponse = await Http.PostAsJsonAsync("api/generation/image", new GenerateImageRequest
+            // From here the article is already on screen, so nothing is allowed to throw into the
+            // catch below: it would report a generation failure for a generation that succeeded, and
+            // skip FetchImageAsync - whose finally is the only thing that clears isImageLoading,
+            // leaving Save disabled with "Waiting for image…" until the user reloads.
+            try
             {
-                ImageDescription = generatedArticle.ImageDescription,
-                SessionToken = textResult.SessionToken
-            });
-            imageResponse.EnsureSuccessStatusCode();
-            var imageResult = await imageResponse.Content.ReadFromJsonAsync<GenerateImageResponse>();
-            generatedArticle.ImageDataUrl = imageResult?.ImageDataUrl;
+                // Keep the remaining-generations count in sync after consuming one.
+                await LoadUsageStatusAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Could not refresh usage status after generating.");
+            }
 
-            currentStep = 4;
-
-            // Keep the remaining-generations count in sync after consuming one.
-            await LoadUsageStatusAsync();
+            await FetchImageAsync(textResult.SessionToken);
         }
         catch (Exception ex)
         {
@@ -864,18 +963,51 @@ else if (isLoading)
         }
     }
 
+    /// <summary>Fetches the image after the article is already on screen. A failure here leaves a
+    /// perfectly readable article, so it never surfaces as a generation error.</summary>
+    private async Task FetchImageAsync(string sessionTokenForImage)
+    {
+        try
+        {
+            var imageResponse = await Http.PostAsJsonAsync("api/generation/image", new GenerateImageRequest
+            {
+                SessionToken = sessionTokenForImage
+            });
+            imageResponse.EnsureSuccessStatusCode();
+            var imageResult = await imageResponse.Content.ReadFromJsonAsync<GenerateImageResponse>();
+
+            // Guard rather than assert: ReturnToGenerator clears generatedArticle, and the user can
+            // click through while the image is still in flight.
+            if (generatedArticle is not null)
+                generatedArticle.ImageDataUrl = imageResult?.ImageDataUrl;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Image generation failed; article shown without an image.");
+        }
+        finally
+        {
+            isImageLoading = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task SaveArticle()
     {
         if (generatedArticle == null) return;
+
+        // Belt and braces alongside the disabled button: saving mid-image-generation would persist the
+        // article with no image, and there's no way to add one afterwards.
+        if (isImageLoading) return;
 
         isSaving = true;
         try
         {
             var refs = selectedReferences.Count > 0 ? selectedReferences : null;
+            // Only the token goes up: the server saves the article it generated against this session,
+            // so there is nothing for the client to send (or tamper with) beyond identifying it.
             var response = await Http.PostAsJsonAsync("api/articles", new SaveArticleRequest
             {
-                Article = generatedArticle,
-                SourcePages = sourcePages,
                 ReferenceLinks = refs,
                 SessionToken = sessionToken ?? ""
             });
@@ -914,6 +1046,8 @@ else if (isLoading)
         selectedTone = ArticleTone.Fun;
         additionalPrompt = "";
         selectedReferences = new List<ReferenceLink>();
+        resolvedReferences = new List<ReferenceLink>();
+        isImageLoading = false;
         StateHasChanged();
     }
 

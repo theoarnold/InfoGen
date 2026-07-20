@@ -4,6 +4,11 @@ public class GeneratedArticle
 {
     public string Title { get; set; } = "";
     public string ImageDescription { get; set; } = "";
+
+    /// <summary>One-line description used in the catalogue shown to the model when generating later
+    /// articles, so it can decide what is worth linking to.</summary>
+    public string? Summary { get; set; }
+
     public string? ImageDataUrl { get; set; }
     public List<ArticleSection> Sections { get; set; } = new();
     public List<InfoboxFact> InfoboxFacts { get; set; } = new();

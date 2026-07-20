@@ -10,6 +10,7 @@ The article should:
 2. Read like a real Wikipedia article with an encyclopedic tone
 3. Start with an intro (1–2 paragraphs, like Wikipedia's lead section) — put this in the "intro" field
 4. Then have 2–4 Wikipedia-style sections with headings. For biographical mashups use headings like "Early life", "Career", "Personal life". For other topics use appropriate headings (e.g. "History", "Description", "Legacy").
+   IMPORTANT: every section must be broken into 2–3 separate paragraphs, each separated by a blank line. Never write a section as one single unbroken block of text.
 5. Have a creative and plausible-sounding title. If the article is about a PERSON (biographical), the title must be ONLY the person's name—no subtitle, no colon, no " - Something" or ": Something" (e.g. "Jane Smith", not "Jane Smith: The Lost Years"). For non-person topics you may use a descriptive title.
 6. Be entertaining to read while maintaining a serious tone
 7. Must NOT use dual natioanlities eg "Australian-American"
@@ -27,7 +28,7 @@ For the infoboxFacts: provide 4–6 key-value pairs of quick-reference informati
 - Work (book/film/album): Author/Director, Published/Released, Genre, Language
 Make up believable fictional details. Each label and value should be short (a few words each).
 
-Respond with valid JSON matching the schema provided. Each section's "content" field should contain the full paragraph(s) for that section (use \n\n to separate multiple paragraphs within a section).
+Respond with valid JSON matching the schema provided. Each section's "content" field must contain that section's full text broken into 2–3 paragraphs, with a blank line between paragraphs. The "intro" field follows the same rule when it runs to more than one paragraph.
 
 {{REFERENCES}}
 

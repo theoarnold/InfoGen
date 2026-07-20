@@ -4,6 +4,7 @@ using InfoGen.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InfoGen.Data.Migrations
 {
     [DbContext(typeof(InfoGenDbContext))]
-    partial class InfoGenDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260718140907_AddArticleSummary")]
+    partial class AddArticleSummary
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -43,9 +46,6 @@ namespace InfoGen.Data.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsSubscribed")
                         .HasColumnType("bit");
 
                     b.Property<bool>("LockoutEnabled")
@@ -80,9 +80,6 @@ namespace InfoGen.Data.Migrations
 
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("SubscriptionCheckedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");

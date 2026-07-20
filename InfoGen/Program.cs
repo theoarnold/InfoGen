@@ -1,5 +1,9 @@
+using System.Security.Claims;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using InfoGen.Components;
 using InfoGen.Data;
 using InfoGen.Services;
@@ -17,6 +21,28 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddAuthorization();
 builder.Services.AddMemoryCache();
+
+// Rate limiting. /api/generation/research deliberately reserves no credit, so without a cap an
+// authenticated user can loop it and run an unmetered Gemini call (plus a 15-minute cache entry)
+// on every iteration. Partitioned per user so one caller can't starve everyone else.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy(RateLimitPolicies.Research, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                // Generation itself is gated by credits; this only needs to stop a tight loop, not
+                // to be the real quota. Ten a minute is far more than the UI can produce by hand.
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
@@ -82,7 +108,7 @@ builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
 
 // Storage services
 builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
-builder.Services.AddScoped<ISubscriberStatusService, SubscriberStatusService>();
+builder.Services.AddScoped<ISubscriptionStateService, SubscriptionStateService>();
 builder.Services.AddScoped<IArticleStorageService, ArticleStorageService>();
 
 // Stripe
@@ -92,6 +118,13 @@ if (!string.IsNullOrEmpty(config["Stripe:SecretKey"]))
 }
 
 builder.Services.AddScoped<IUsageService, UsageService>();
+
+// sitemap.xml/robots.txt only. The default key includes scheme+host, so the Request.Host fallback in
+// ResolveBaseUrl can't have one caller's host served back to another.
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy(SeoEndpoints.CachePolicy, policy => policy.Expire(TimeSpan.FromHours(6)));
+});
 
 var app = builder.Build();
 
@@ -117,6 +150,12 @@ app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 
+// After the automatic authentication middleware, so the limiter can partition by user id rather
+// than falling back to IP (which NATs many users onto one bucket).
+app.UseRateLimiter();
+
+app.UseOutputCache();
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
@@ -130,8 +169,15 @@ app.MapGenerationEndpoints();
 app.MapUsageEndpoints();
 app.MapSeoEndpoints();
 app.MapStripeWebhookEndpoints();
+app.MapAdminEndpoints();
 
-var stripeGroup = app.MapGroup("/stripe").RequireAuthorization();
+// Antiforgery is required explicitly at the group level. The middleware only validates endpoints
+// carrying antiforgery metadata, which minimal APIs infer from [FromForm] - so create-checkout and
+// create-portal, which take no form parameters, were being posted to without their token ever being
+// checked even though the forms have always sent one.
+var stripeGroup = app.MapGroup("/stripe")
+    .RequireAuthorization()
+    .WithMetadata(new RequireAntiforgeryTokenAttribute());
 
 stripeGroup.MapPost("/create-checkout", async (
     HttpContext context,
@@ -150,7 +196,9 @@ stripeGroup.MapPost("/create-checkout", async (
     return Results.Redirect(checkoutUrl);
 });
 
-var accountGroup = app.MapGroup("/Account").RequireAuthorization();
+var accountGroup = app.MapGroup("/Account")
+    .RequireAuthorization()
+    .WithMetadata(new RequireAntiforgeryTokenAttribute());
 
 accountGroup.MapPost("/UpdateDisplayName", async (
     HttpContext context,

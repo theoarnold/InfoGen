@@ -11,19 +11,27 @@ public partial class ArticleStorageService : IArticleStorageService
 {
     private readonly InfoGenDbContext _dbContext;
     private readonly IBlobStorageService _blobStorageService;
-    private readonly ISubscriberStatusService _subscriberStatusService;
     private readonly ILogger<ArticleStorageService> _logger;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+    // Column is nvarchar(300); headroom for the ellipsis.
+    private const int MaxSummaryLength = 280;
+
+    private const int MaxStoredReferenceLinks = 25;
+
+    // Matches the ReferenceLinksJson column, nvarchar(4000).
+    private const int MaxReferenceLinksJsonLength = 4000;
+
+    // List/search endpoints are anonymous, so the caller doesn't choose how much of the table to pull.
+    private const int MaxPageSize = 50;
 
     public ArticleStorageService(
         InfoGenDbContext dbContext,
         IBlobStorageService blobStorageService,
-        ISubscriberStatusService subscriberStatusService,
         ILogger<ArticleStorageService> logger)
     {
         _dbContext = dbContext;
         _blobStorageService = blobStorageService;
-        _subscriberStatusService = subscriberStatusService;
         _logger = logger;
     }
 
@@ -33,16 +41,29 @@ public partial class ArticleStorageService : IArticleStorageService
         if (!string.IsNullOrEmpty(article.ImageDataUrl))
         {
             _logger.LogInformation("Uploading image to Azure Blob Storage...");
-            imageUrl = await _blobStorageService.UploadImageAsync(article.ImageDataUrl);
+            try
+            {
+                imageUrl = await _blobStorageService.UploadImageAsync(article.ImageDataUrl);
+            }
+            catch (ArgumentException ex)
+            {
+                // The session is already consumed, so failing the save would lose the article for good.
+                _logger.LogError(ex, "Rejected the generated image; saving '{Title}' without one.", article.Title);
+            }
         }
 
         var slug = await GenerateUniqueSlugAsync(article.Title);
+
+        // Deliberately ignores the caller's list: the catalogue offered to the model may hold hundreds
+        // of entries, and only links actually present in the body text can render.
+        referenceLinks = await ResolveReferenceLinksAsync(article);
 
         var entity = new SavedArticleEntity
         {
             Id = Guid.NewGuid(),
             Title = article.Title,
             Slug = slug,
+            Summary = DeriveSummary(article),
             ImageDescription = article.ImageDescription,
             ImageUrl = imageUrl,
             SectionsJson = JsonSerializer.Serialize(article.Sections),
@@ -55,9 +76,7 @@ public partial class ArticleStorageService : IArticleStorageService
             })),
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = createdByUserId,
-            ReferenceLinksJson = referenceLinks is { Count: > 0 }
-                ? JsonSerializer.Serialize(referenceLinks.Select(r => new { r.Title, r.Slug }))
-                : null
+            ReferenceLinksJson = SerializeReferenceLinks(referenceLinks)
         };
 
         _dbContext.SavedArticles.Add(entity);
@@ -75,8 +94,13 @@ public partial class ArticleStorageService : IArticleStorageService
 
     public async Task<List<SavedArticleSummary>> SearchArticlesAsync(string query, int skip = 0, int take = 15)
     {
+        // Clamped here rather than at the endpoint: this is an unindexed LIKE '%...%' scan reachable
+        // anonymously, so every caller has to be bounded.
+        take = Math.Clamp(take, 1, MaxPageSize);
+        skip = Math.Max(skip, 0);
+
         return await _dbContext.SavedArticles
-            .Where(a => a.Title.Contains(query))
+            .Where(a => a.Title.Contains(query) || (a.Summary != null && a.Summary.Contains(query)))
             .OrderByDescending(a => a.CreatedAt)
             .Skip(skip)
             .Take(take)
@@ -101,18 +125,16 @@ public partial class ArticleStorageService : IArticleStorageService
         var creatorIsSubscribed = false;
         if (!string.IsNullOrEmpty(entity.CreatedByUserId))
         {
-            // Never fall back to email/username here - both are PII. Users who haven't picked a
-            // display name yet get a default that's stable (same value every time) but reveals
-            // nothing about the account.
-            var creatorDisplayNameSet = await _dbContext.Users
+            // Never fall back to email/username for the display name - both are PII.
+            var creator = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u => u.Id == entity.CreatedByUserId)
-                .Select(u => u.DisplayName)
+                .Select(u => new { u.DisplayName, u.IsSubscribed })
                 .FirstOrDefaultAsync();
-            creatorDisplayName = string.IsNullOrEmpty(creatorDisplayNameSet)
+            creatorDisplayName = string.IsNullOrEmpty(creator?.DisplayName)
                 ? GenerateDefaultDisplayName(entity.CreatedByUserId)
-                : creatorDisplayNameSet;
-            creatorIsSubscribed = await _subscriberStatusService.IsSubscribedAsync(entity.CreatedByUserId);
+                : creator.DisplayName;
+            creatorIsSubscribed = creator?.IsSubscribed ?? false;
         }
 
         return new SavedArticleDetail
@@ -138,9 +160,7 @@ public partial class ArticleStorageService : IArticleStorageService
     public async Task RecordViewAsync(string slug)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        // Single atomic UPDATE (no read-then-write): the DB increments in place so concurrent views
-        // can't lose counts. The daily counter resets to 1 the first time it's viewed on a new UTC day.
-        // A non-existent slug simply matches zero rows.
+        // Atomic UPDATE rather than read-then-write, so concurrent views can't lose counts.
         await _dbContext.SavedArticles
             .Where(a => a.Slug == slug)
             .ExecuteUpdateAsync(setters => setters
@@ -151,6 +171,7 @@ public partial class ArticleStorageService : IArticleStorageService
 
     public async Task<List<SavedArticleSummary>> GetTopViewedTodayAsync(int count = 10)
     {
+        count = Math.Clamp(count, 1, MaxPageSize);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         return await _dbContext.SavedArticles
             .Where(a => a.DailyViewsDate == today && a.DailyViews > 0)
@@ -171,6 +192,7 @@ public partial class ArticleStorageService : IArticleStorageService
 
     public async Task<List<SavedArticleSummary>> GetRecentArticlesAsync(int count = 10)
     {
+        count = Math.Clamp(count, 1, MaxPageSize);
         return await _dbContext.SavedArticles
             .OrderByDescending(a => a.CreatedAt)
             .Take(count)
@@ -180,6 +202,26 @@ public partial class ArticleStorageService : IArticleStorageService
                 Slug = a.Slug,
                 ImageUrl = a.ImageUrl,
                 CreatedAt = a.CreatedAt
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<ArticleCatalogueEntry>> SearchCatalogueAsync(string query, int take = 10)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return [];
+        query = query.Trim();
+        take = Math.Clamp(take, 1, 25);
+
+        return await _dbContext.SavedArticles
+            .Where(a => a.Title.Contains(query) || (a.Summary != null && a.Summary.Contains(query)))
+            .OrderByDescending(a => a.TotalViews)
+            .ThenByDescending(a => a.CreatedAt)
+            .Take(take)
+            .Select(a => new ArticleCatalogueEntry
+            {
+                Title = a.Title,
+                Slug = a.Slug,
+                Summary = a.Summary
             })
             .ToListAsync();
     }
@@ -211,9 +253,78 @@ public partial class ArticleStorageService : IArticleStorageService
             .FirstOrDefaultAsync();
     }
 
+    /// <summary>Resolves the [[Title]] links the model wrote against real saved articles. Titles that
+    /// don't match anything are dropped and render as plain text.</summary>
+    public async Task<List<ReferenceLink>> ResolveReferenceLinksAsync(GeneratedArticle article)
+    {
+        var texts = article.Sections
+            .SelectMany(s => s.Paragraphs)
+            .Concat(article.InfoboxFacts.Select(f => f.Value))
+            .Append(article.ImageDescription);
+
+        var titles = texts
+            .SelectMany(ReferenceLinkRenderer.ExtractTitles)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxStoredReferenceLinks)
+            .ToList();
+
+        if (titles.Count == 0) return [];
+
+        return await _dbContext.SavedArticles
+            .Where(a => titles.Contains(a.Title))
+            .Select(a => new ReferenceLink { Title = a.Title, Slug = a.Slug })
+            .ToListAsync();
+    }
+
+    /// <summary>Adds links one at a time while they still fit ReferenceLinksJson's nvarchar(4000).
+    /// MaxStoredReferenceLinks alone doesn't bound this - Title and Slug are nvarchar(500) each, so 25
+    /// entries can overflow the column and throw on SaveChanges, losing the whole article.</summary>
+    private static string? SerializeReferenceLinks(List<ReferenceLink>? referenceLinks)
+    {
+        if (referenceLinks is not { Count: > 0 }) return null;
+
+        var kept = new List<object>();
+        string? json = null;
+
+        foreach (var link in referenceLinks)
+        {
+            kept.Add(new { link.Title, link.Slug });
+            var candidate = JsonSerializer.Serialize(kept);
+            if (candidate.Length > MaxReferenceLinksJsonLength)
+            {
+                kept.RemoveAt(kept.Count - 1);
+                break;
+            }
+            json = candidate;
+        }
+
+        return json;
+    }
+
+    private static string? DeriveSummary(GeneratedArticle article)
+    {
+        var summary = article.Summary;
+        if (string.IsNullOrWhiteSpace(summary))
+            summary = FirstSentence(article.Sections.FirstOrDefault()?.Paragraphs.FirstOrDefault());
+
+        if (string.IsNullOrWhiteSpace(summary)) return null;
+
+        // Summaries are fed back to the model as catalogue entries and matched literally by search, so
+        // the [[Title]] markers the model writes into lead sentences have to come out.
+        summary = ReferenceLinkRenderer.StripMarkers(summary).Trim();
+        if (summary.Length == 0) return null;
+        return summary.Length <= MaxSummaryLength ? summary : summary[..MaxSummaryLength].TrimEnd() + "…";
+    }
+
+    private static string? FirstSentence(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var end = text.IndexOf(". ", StringComparison.Ordinal);
+        return end > 0 ? text[..(end + 1)] : text;
+    }
+
     /// <summary>Re-splits stored paragraphs on read. Articles saved before the paragraph-splitting fix
-    /// have literal "\n\n" sequences sitting inside a single paragraph; this makes them render as
-    /// separate paragraphs without needing to rewrite the stored JSON.</summary>
+    /// have literal "\n\n" inside a single paragraph; this avoids rewriting the stored JSON.</summary>
     private static List<ArticleSection> NormalizeSections(List<ArticleSection> sections)
     {
         foreach (var section in sections)
@@ -221,8 +332,7 @@ public partial class ArticleStorageService : IArticleStorageService
         return sections;
     }
 
-    /// <summary>Deterministic (stable across app restarts) but non-identifying placeholder name for
-    /// accounts that haven't picked a display name yet - never based on email/username.</summary>
+    // Stable across restarts but non-identifying - never derived from email/username.
     private static string GenerateDefaultDisplayName(string userId)
     {
         var hashBytes = System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes(userId));

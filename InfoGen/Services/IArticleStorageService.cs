@@ -8,6 +8,13 @@ public interface IArticleStorageService
     Task<List<SavedArticleSummary>> SearchArticlesAsync(string query, int skip = 0, int take = 15);
     Task<SavedArticleDetail?> GetArticleBySlugAsync(string slug);
     Task<List<SavedArticleSummary>> GetRecentArticlesAsync(int count = 10);
+    /// <summary>Title + summary search, backing the search_articles tool the model calls while deciding
+    /// which existing articles to link. Matches summaries as well as titles.</summary>
+    Task<List<ArticleCatalogueEntry>> SearchCatalogueAsync(string query, int take = 10);
+
+    /// <summary>Finds the [[Title]] markers the model wrote and resolves them against real saved articles.
+    /// Titles matching nothing are dropped. Used both when saving and when returning the preview.</summary>
+    Task<List<ReferenceLink>> ResolveReferenceLinksAsync(GeneratedArticle article);
     /// <summary>Articles ordered by today's (UTC) view count, most-viewed first. Only includes articles viewed today.</summary>
     Task<List<SavedArticleSummary>> GetTopViewedTodayAsync(int count = 10);
     /// <summary>Records one page view for the article: bumps the all-time total and the per-day counter

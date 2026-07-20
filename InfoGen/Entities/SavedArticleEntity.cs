@@ -6,6 +6,11 @@ public class SavedArticleEntity
     public string Title { get; set; } = "";
     public string Slug { get; set; } = "";
     public string ImageDescription { get; set; } = "";
+
+    /// <summary>One-line description of this article, shown to the model in the catalogue when it
+    /// generates later articles. Null for articles saved before this existed (backfilled separately).</summary>
+    public string? Summary { get; set; }
+
     public string? ImageUrl { get; set; }
     public string SectionsJson { get; set; } = "[]";
     public string InfoboxFactsJson { get; set; } = "[]";

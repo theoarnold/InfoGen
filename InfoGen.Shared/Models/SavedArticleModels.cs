@@ -46,3 +46,12 @@ public class ReferenceLink
     public string Title { get; set; } = "";
     public string Slug { get; set; } = "";
 }
+
+/// <summary>One entry in the catalogue of existing articles handed to the model at generation time.
+/// Deliberately title + summary only - never article bodies, which would blow up the prompt.</summary>
+public class ArticleCatalogueEntry
+{
+    public string Title { get; set; } = "";
+    public string Slug { get; set; } = "";
+    public string? Summary { get; set; }
+}

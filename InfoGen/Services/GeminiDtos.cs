@@ -35,6 +35,7 @@ public class GeminiArticleResponse
 {
     public string? Title { get; set; }
     public string? ImageDescription { get; set; }
+    public string? Summary { get; set; }
     public string? Intro { get; set; }
     public List<GeminiArticleSection>? Sections { get; set; }
     public List<GeminiInfoboxFact>? InfoboxFacts { get; set; }

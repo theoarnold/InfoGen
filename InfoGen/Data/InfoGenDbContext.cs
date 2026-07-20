@@ -22,6 +22,7 @@ public class InfoGenDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.Slug).HasMaxLength(500);
             entity.HasIndex(e => e.Slug).IsUnique();
             entity.Property(e => e.ImageDescription).HasMaxLength(1000);
+            entity.Property(e => e.Summary).HasMaxLength(300);
             entity.Property(e => e.ImageUrl).HasMaxLength(2000);
             entity.Property(e => e.CreatedByUserId).HasMaxLength(450);
             entity.Property(e => e.ReferenceLinksJson).HasMaxLength(4000);

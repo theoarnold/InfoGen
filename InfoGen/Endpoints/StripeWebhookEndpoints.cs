@@ -12,6 +12,7 @@ public static class StripeWebhookEndpoints
             HttpContext context,
             IConfiguration configuration,
             IUsageService usage,
+            ISubscriptionStateService subscriptionState,
             ILogger<StripeWebhookLogCategory> logger) =>
         {
             var webhookSecret = configuration["Stripe:WebhookSecret"];
@@ -40,10 +41,9 @@ public static class StripeWebhookEndpoints
                 return Results.BadRequest();
             }
 
-            // For instant methods (cards) checkout.session.completed already carries PaymentStatus=="paid".
-            // For delayed methods it arrives "unpaid" and the real confirmation comes later via
-            // checkout.session.async_payment_succeeded - so we handle both event types and, in every
-            // case, only credit once Stripe reports the money as actually paid.
+            // Cards arrive "paid" on checkout.session.completed; delayed methods arrive "unpaid" and
+            // confirm later via async_payment_succeeded. Both are handled, and neither credits until
+            // Stripe reports the money as actually paid.
             if ((stripeEvent.Type == "checkout.session.completed" || stripeEvent.Type == "checkout.session.async_payment_succeeded") &&
                 stripeEvent.Data.Object is Session session &&
                 session.Mode == "payment")
@@ -70,6 +70,28 @@ public static class StripeWebhookEndpoints
                 }
             }
 
+            // Mirrored into ApplicationUser.IsSubscribed so read paths never have to ask Stripe.
+            if (stripeEvent.Data.Object is Subscription subscription &&
+                stripeEvent.Type.StartsWith("customer.subscription.", StringComparison.Ordinal))
+            {
+                // "deleted" can still carry a non-cancelled status, so treat the event type as decisive.
+                var isActive = stripeEvent.Type != "customer.subscription.deleted" &&
+                               subscription.Status is "active" or "trialing";
+
+                await subscriptionState.SetByStripeCustomerIdAsync(subscription.CustomerId, isActive);
+                logger.LogInformation("Subscription event {EventType} (status {Status}) for customer {CustomerId} -> IsSubscribed={IsActive}.",
+                    stripeEvent.Type, subscription.Status, subscription.CustomerId, isActive);
+            }
+            // First signal that someone subscribed - customer.subscription.created may arrive later.
+            else if (stripeEvent.Type == "checkout.session.completed" &&
+                     stripeEvent.Data.Object is Session subSession &&
+                     subSession.Mode == "subscription" &&
+                     !string.IsNullOrEmpty(subSession.CustomerId))
+            {
+                await subscriptionState.SetByStripeCustomerIdAsync(subSession.CustomerId, true);
+                logger.LogInformation("Subscription checkout completed for customer {CustomerId}.", subSession.CustomerId);
+            }
+
             // Stripe needs a 2xx to stop retrying; unhandled event types are a deliberate no-op.
             return Results.Ok();
         }).AllowAnonymous();
@@ -77,6 +99,5 @@ public static class StripeWebhookEndpoints
         return endpoints;
     }
 
-    // Just a stable category name for the webhook logger.
     private sealed class StripeWebhookLogCategory { }
 }

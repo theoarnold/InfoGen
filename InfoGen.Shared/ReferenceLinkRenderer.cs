@@ -11,8 +11,10 @@ public static class ReferenceLinkRenderer
     {
         if (string.IsNullOrEmpty(paragraph))
             return "";
-        if (referenceLinks == null || referenceLinks.Count == 0)
-            return System.Net.WebUtility.HtmlEncode(paragraph);
+
+        // Deliberately no early-out for an empty link list: the text may still contain [[Title]]
+        // markers the model invented, and those must be stripped rather than rendered as brackets.
+        referenceLinks ??= [];
 
         var sb = new StringBuilder();
         int i = 0;
@@ -41,7 +43,64 @@ public static class ReferenceLinkRenderer
                 sb.Append("<a href=\"").Append(href).Append("\">").Append(displayTitle).Append("</a>");
             }
             else
-                sb.Append(System.Net.WebUtility.HtmlEncode(paragraph[open..(close + 2)]));
+                // Unknown title (model invented or misspelled one): show the text without the
+                // brackets rather than leaking literal "[[...]]" into the article.
+                sb.Append(System.Net.WebUtility.HtmlEncode(rawTitle));
+            i = close + 2;
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Returns every [[Title]] referenced in the text, in order, de-duplicated case-insensitively.
+    /// Used after generation to work out which existing articles the model actually linked, so only those
+    /// get stored (the catalogue sent to the model is far too large to persist).</summary>
+    public static List<string> ExtractTitles(string? paragraph)
+    {
+        var found = new List<string>();
+        if (string.IsNullOrEmpty(paragraph)) return found;
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int i = 0;
+        while (i < paragraph.Length)
+        {
+            int open = paragraph.IndexOf("[[", i, StringComparison.Ordinal);
+            if (open < 0) break;
+            int close = paragraph.IndexOf("]]", open + 2, StringComparison.Ordinal);
+            if (close < 0) break;
+
+            var title = NormalizeTitle(paragraph[(open + 2)..close]);
+            if (title.Length > 0 && seen.Add(title))
+                found.Add(title);
+            i = close + 2;
+        }
+        return found;
+    }
+
+    /// <summary>Returns the text with [[Title]] markers reduced to plain "Title". For places that store
+    /// or display the prose as text rather than HTML - <see cref="ToHtml"/> is the equivalent for
+    /// rendering, but it HTML-encodes, which is wrong for a value going into the database.</summary>
+    public static string StripMarkers(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+
+        var sb = new StringBuilder();
+        int i = 0;
+        while (i < text.Length)
+        {
+            int open = text.IndexOf("[[", i, StringComparison.Ordinal);
+            if (open < 0)
+            {
+                sb.Append(text[i..]);
+                break;
+            }
+            sb.Append(text[i..open]);
+            int close = text.IndexOf("]]", open + 2, StringComparison.Ordinal);
+            if (close < 0)
+            {
+                sb.Append(text[open..]);
+                break;
+            }
+            sb.Append(text[(open + 2)..close].Trim());
             i = close + 2;
         }
         return sb.ToString();

@@ -5,10 +5,11 @@ namespace InfoGen.Api;
 
 public class SaveArticleRequest
 {
-    public GeneratedArticle Article { get; set; } = new();
-    public List<WikipediaPage> SourcePages { get; set; } = new();
     public List<ReferenceLink>? ReferenceLinks { get; set; }
-    /// <summary>Proves this content came from a real /api/generation/text call for this user.</summary>
+
+    /// <summary>Identifies which generation to save. The article, its source pages and its image are
+    /// all held server-side against this token - deliberately not sent by the client, so the content
+    /// that gets published is provably the content that was generated.</summary>
     public string SessionToken { get; set; } = "";
 }
 
